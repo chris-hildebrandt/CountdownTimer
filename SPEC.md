@@ -344,6 +344,51 @@ Each step is its own commit. I pause for your review after steps 1, 4 and 8.
 - [ ] First visit ≤ 100 KB, ≤ 4 requests.
 - [ ] All text ≥ 4.5:1 contrast.
 
+## 11a. Review findings carried forward
+Found by code review and adversarial testing of step 1; each is owned by the step named.
+
+**Step 3 (time logic)**
+- Ship ES2017-level JavaScript (no `?.`, `??`): one syntax error on an old iPad kills the
+  whole script. Static markup shows `--` placeholders, never real-looking digits, so a
+  failed script can't show a frozen, wrong countdown.
+- `requestIdleCallback` doesn't exist in Safari/iOS: fall back to `setTimeout`.
+- Clock check: the `Date` header has 1 s resolution (add ~0.5 s plus half the round trip);
+  ignore responses with a nonzero `Age`; if the Google Sites frame gives the widget an opaque
+  origin, `Date` may be unreadable (not CORS-safelisted). Then the check silently does
+  nothing, which is acceptable. Log `self.origin` and readability on the step 8 test page.
+- `Intl` time math: use `hourCycle: "h23"` and still map hour 24 → 0; two-pass offset for
+  DST; `tests.html` covers endsAt at 02:30 on DST-change days.
+- Days tiles: rebuild the days container only when its length changes. Update the screen
+  reader summary from the same computed value in the same tick. No `aria-live`.
+
+**Step 2 (config)**
+- Set text with `textContent`, never `innerHTML`. Make `lang` configurable alongside labels.
+- Long or translated unit labels can widen a unit beyond its tiles; keep labels short or
+  let them overflow their unit centered.
+- Derived colors (tile split line, hover overlay, focus ring) follow `buttonBg`; the
+  contrast check (step 6) is a reusable script, re-run whenever config colors change.
+
+**Step 4 (responsive)**
+- Font size jumps at 599/600 and 899/900 (tiles grow ~60% across 1 px), and the one-row
+  layout is stuck at its 15 px floor from 900 to ~1027 px. Make sizes continuous across
+  breakpoints; unit labels never below ~11 px.
+- Very short embed boxes (under ~110 px tall at desktop width) clip; fix or document a
+  minimum height.
+- `preview.html` includes 1 px breakpoint pairs, short boxes (360x60, 1200x80), a no-Lora
+  variant, minimum font size 16, forced dark mode and Windows High Contrast.
+
+**Step 5 (performance)**
+- The Google Fonts stylesheet is render-blocking: load it with `preload` + `onload` swap and
+  a `<noscript>` fallback. Tune Georgia `size-adjust` (fallback is 7–14 px wider at phone sizes).
+
+**Step 8 (Google Sites test)**
+- Verify the redirect page completes its job (not just opens a tab) from the embed on
+  iPhone, Android and PC, in case the sandbox applies to opened tabs.
+
+**Phase 2**
+- Palette, mode and arrow controls must be `<button>`s, not links.
+- Wrap even the *access* to `localStorage` in try/catch (it throws in sandboxed frames).
+
 ## 12. Open questions
 None. Decisions from rev 3's questions:
 - Mission start = end date minus 18 months (9.2).
