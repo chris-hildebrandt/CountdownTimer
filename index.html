@@ -53,9 +53,16 @@ const CONFIG = {
     --font: "Lora", Georgia, "Times New Roman", serif;
   }
 
-  /* 1rem = title size. Every other size is in rem (or em of its own font-size),
-     so one line per layout scales the bar. ≥900px: 20px at a ~1370px-wide bar. */
-  html { font-size: clamp(15px, min(1.46vw, 14vh), 24px); }
+  /* Sizing. 1rem = title size; every other size is in rem (or em of its own font-size),
+     so one font-size line per layout scales the whole bar.
+     - The three width formulas meet at the breakpoints (18.3px at 599/600, 14.2px at
+       899/900), so nothing jumps by more than a pixel when the layout switches.
+       The two-row layout shrinks slightly as it widens so it hands over to the
+       one-row layout, which needs the most width, at the size that still fits.
+     - ≥900: 14.2px at 900 (title fits one line), ~20px at 1400 (the reference), max 24px.
+     - The vh term only matters in short boxes: text shrinks instead of clipping.
+       Below ~110px tall at desktop widths it gets small; recommend at least 110px. */
+  html { font-size: clamp(9px, min(3.094px + 1.234vw, 15.5vh), 24px); }
 
   html, body { width: 100%; height: 100%; margin: 0; background: transparent; }
   body {
@@ -75,7 +82,8 @@ const CONFIG = {
     align-items: center;
     gap: .5rem 1rem;
     min-height: 6.15rem;
-    padding: .6rem 4rem;
+    /* Side padding 4rem when there is room, down to 1rem near 900px. */
+    padding: .6rem clamp(1rem, (100vw - 61rem) / 2, 4rem);
     background: var(--background);
     box-shadow: 0 12px 24px -12px var(--shadow);
   }
@@ -154,7 +162,7 @@ const CONFIG = {
     width: 0;
     white-space: nowrap;
     margin-top: .3rem;
-    font-size: .6rem;
+    font-size: max(.6rem, 11px);
     letter-spacing: .08em;
     line-height: 1;
     color: var(--label-text);
@@ -207,7 +215,7 @@ const CONFIG = {
 
   /* 600–899px: title and button on top, timer below. */
   @media (max-width: 899px) {
-    html { font-size: clamp(12px, min(2.75vw, 10.5vh), 24px); }
+    html { font-size: clamp(9px, min(26.53px - 1.371vw, 12vh), 24px); }
     .bar {
       grid-template-areas: "title button" "timer timer";
       grid-template-columns: minmax(0, 1fr) auto;
@@ -219,7 +227,7 @@ const CONFIG = {
 
   /* <600px: timer on top, then a smaller title and button side by side. */
   @media (max-width: 599px) {
-    html { font-size: clamp(10px, min(4.9vw, 14.5vh), 24px); }
+    html { font-size: clamp(9px, min(4.9vw, 16vh), 18.3px); }
     .bar {
       /* Outer 1fr spacer columns center the title+button pair; the spanning timer
          sizes against them, so it doesn't widen the button column. */

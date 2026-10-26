@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Countdown Bar preview</title>
+<style>
+  body { margin: 16px; font: 14px/1.4 system-ui, sans-serif; color: #1d2a2a; background: #eef1f1; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 28px 0 8px; }
+  p { margin: 0 0 12px; max-width: 70ch; }
+  figure { margin: 0 0 18px; overflow-x: auto; }
+  figcaption { font: 12px/1.4 ui-monospace, Consolas, monospace; margin-bottom: 4px; }
+  /* Dashed outline marks the embed box edge; the page background stands in for the Google Sites section. */
+  iframe { display: block; border: 0; outline: 1px dashed #9aa; }
+  .pair { display: flex; flex-wrap: wrap; gap: 16px; }
+</style>
+</head>
+<body>
+<h1>Countdown Bar preview</h1>
+<p>index.html in iframes the size of Google Sites' embed box. Frames scrolled out of view pause
+  their countdown (by design) and resume when scrolled back.</p>
+
+<h2>Google Sites ratio (2.85 : 1)</h2>
+<div id="ratio"></div>
+
+<h2>Breakpoint pairs (1 px apart: sizes should not jump)</h2>
+<div id="pairs" class="pair"></div>
+
+<h2>Short boxes (below the recommended 110 px height)</h2>
+<div id="short"></div>
+
+<h2>Wider box (5 : 1)</h2>
+<div id="wide"></div>
+
+<script>
+(function () {
+  'use strict';
+  var groups = {
+    ratio: [[360, 126], [600, 211], [900, 316], [1400, 491]],
+    pairs: [[599, 210], [600, 211], [899, 315], [900, 316]],
+    short: [[360, 60], [1200, 80]],
+    wide:  [[1100, 220]]
+  };
+  Object.keys(groups).forEach(function (id) {
+    var box = document.getElementById(id);
+    groups[id].forEach(function (s) {
+      var fig = document.createElement('figure');
+      var cap = document.createElement('figcaption');
+      cap.textContent = s[0] + ' × ' + s[1];
+      var frame = document.createElement('iframe');
+      frame.src = 'index.html';
+      frame.width = s[0];
+      frame.height = s[1];
+      frame.title = 'Countdown bar at ' + s[0] + ' by ' + s[1];
+      fig.appendChild(cap);
+      fig.appendChild(frame);
+      box.appendChild(fig);
+    });
+  });
+})();
+</script>
+</body>
+</html>
