@@ -30,7 +30,11 @@ const CONFIG = {
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link id="lora" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<script>
+  // Dev aid for preview.html: index.html?nolora shows the Georgia fallback.
+  if (/[?&]nolora(&|$)/.test(location.search)) document.getElementById('lora').disabled = true;
+</script>
 <style>
   :root {
     /* Opt out of forced/auto dark modes that would recolor the tiles. */
@@ -225,8 +229,9 @@ const CONFIG = {
     .timer { justify-self: center; }
   }
 
-  /* <600px: timer on top, then a smaller title and button side by side. */
-  @media (max-width: 599px) {
+  /* <600px, and short wide boxes (≥4:1) up to 899px: timer on top, then a smaller
+     title and button side by side. */
+  @media (max-width: 599px), (max-width: 899px) and (min-aspect-ratio: 4/1) {
     html { font-size: clamp(9px, min(4.9vw, 16vh), 18.3px); }
     .bar {
       /* Outer 1fr spacer columns center the title+button pair; the spanning timer
@@ -241,6 +246,13 @@ const CONFIG = {
     .title { font-size: .66rem; }
     .timer { justify-self: center; }
     .button { justify-self: start; margin-left: .6rem; font-size: .66rem; padding: .35rem .7rem; }
+    /* Hit area grows down and up only into the row gap, never over the SEC label. */
+    .button::before { top: -.35rem; transform: none; height: max(100% + .35rem, 44px); }
+  }
+  /* Short wide 600–899: same layout, but keep the 600–899 width formula so sizes stay
+     continuous with 599 and 900. */
+  @media (min-width: 600px) and (max-width: 899px) and (min-aspect-ratio: 4/1) {
+    html { font-size: clamp(9px, min(26.53px - 1.371vw, 16vh), 24px); }
   }
 
   @media (forced-colors: active) {
@@ -257,6 +269,7 @@ const CONFIG = {
     <p class="title">
       <!-- Material Symbols Outlined "alarm", wght 400, fill 0 (Google, Apache 2.0) -->
       <svg class="title-icon" viewBox="0 -960 960 960" aria-hidden="true" focusable="false"><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-800q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Zm0-360Zm112 168 56-56-128-128v-184h-80v216l152 152ZM224-866l56 56-170 170-56-56 170-170Zm512 0 170 170-56 56-170-170 56-56ZM480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720q-117 0-198.5 81.5T200-440q0 117 81.5 198.5T480-160Z"/></svg>
+      <!-- Fallback text, shown only if CONFIG fails to load: keep in sync with CONFIG. -->
       <span class="title-text">Sister Hildebrandt- CALLED to SERVE!</span>
     </p>
 
@@ -287,6 +300,7 @@ const CONFIG = {
       </div>
     </div>
 
+    <!-- Fallback link and text, shown only if CONFIG fails to load: keep in sync with CONFIG. -->
     <a class="button" href="https://chris-hildebrandt.github.io/missionary-email-redirect/" target="_blank" rel="noopener"><span class="button-text">send her LOVE</span><span class="visually-hidden"> (opens in new tab)</span></a>
   </div>
 
@@ -295,57 +309,15 @@ const CONFIG = {
   'use strict';
   // ES2017 only (no ?. or ??): an old iPad must be able to parse this.
 
-  var root = document.documentElement;
-  var bar = document.querySelector('.bar');
-
-  function kebab(name) {
-    return name.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); });
-  }
-
-  function setText(selector, text) {
-    var el = bar.querySelector(selector);
-    if (!el) return null;
-    el.textContent = text;
-    return el;
-  }
-
-  function applyConfig(cfg) {
-    if (cfg.lang) root.lang = cfg.lang;
-
-    var theme = cfg.theme || {};
-    Object.keys(theme).forEach(function (key) {
-      root.style.setProperty('--' + kebab(key), theme[key]);
-    });
-
-    setText('.title-text', cfg.title);
-    bar.querySelector('.title').hidden = !cfg.title;
-    var icon = bar.querySelector('.title-icon');
-    if (cfg.icon === 'none') {
-      icon.parentNode.removeChild(icon);
-    } else if (cfg.icon !== 'alarm') {
-      console.warn('CONFIG.icon: only "alarm" or "none" are available; showing "alarm".');
-    }
-
-    setText('.timer-title', cfg.timerTitle).hidden = !cfg.timerTitle;
-
-    var button = bar.querySelector('.button');
-    setText('.button-text', cfg.buttonText);
-    button.href = cfg.buttonLink;
-    button.hidden = !cfg.buttonText;
-
-    var labels = cfg.labels || {};
-    Array.prototype.forEach.call(bar.querySelectorAll('.unit[data-unit]'), function (unit) {
-      var label = labels[unit.getAttribute('data-unit')];
-      if (label != null) unit.querySelector('.unit-label').textContent = label;
-    });
-  }
-
-  applyConfig(CONFIG);
-
-  // ---------------------------------------------------------------------------
-  // Pure time functions (exposed on window.CountdownBar for tests.html).
-  // ---------------------------------------------------------------------------
   var SECOND = 1000, MINUTE = 60 * SECOND, HOUR = 60 * MINUTE, DAY = 24 * HOUR;
+  var THEME_KEYS = ['background', 'tileBg', 'tileText', 'labelText', 'titleText',
+                    'timerTitleText', 'buttonBg', 'buttonText'];
+  var bar = document.querySelector('.bar');
+  var template = bar.cloneNode(true); // pristine markup, for tests
+
+  // ---------------------------------------------------------------------------
+  // Pure functions (exposed on window.CountdownBar for tests.html).
+  // ---------------------------------------------------------------------------
 
   // "YYYY-MM-DDTHH:MM" or "...:SS" -> fields, or null if malformed/out of range.
   function parseLocal(str) {
@@ -413,6 +385,56 @@ const CONFIG = {
     return best !== null ? best : wall - before;
   }
 
+  // Returns the trimmed zone name, or null. Only full IANA names ("America/Boise") or
+  // "UTC": a missing zone would silently use each viewer's own, abbreviations like
+  // "MST" have no DST, and "Etc/GMT-6" means UTC+6 (inverted sign).
+  function checkTimeZone(tz) {
+    if (typeof tz !== 'string') return null;
+    var zone = tz.trim();
+    if (zone !== 'UTC' && (zone.indexOf('/') < 0 || /^etc\//i.test(zone))) return null;
+    try { formatterFor(zone); } catch (err) { return null; }
+    return zone;
+  }
+
+  // CONFIG -> { endsAt, zone } or { error }.
+  function resolveTarget(cfg) {
+    var fields = parseLocal(cfg.endsAt);
+    if (!fields) {
+      return { error: 'CONFIG.endsAt must look like "2028-04-05T17:00"; got ' + JSON.stringify(cfg.endsAt) + '.' };
+    }
+    var zone = checkTimeZone(cfg.timeZone);
+    if (!zone) {
+      return { error: 'CONFIG.timeZone must be a full time zone name such as "America/Boise" (or "UTC"); got ' +
+        JSON.stringify(cfg.timeZone) + '. Abbreviations like "MST" and "Etc/..." zones are not accepted.' };
+    }
+    return { endsAt: zonedTimeToUtc(fields, zone), zone: zone };
+  }
+
+  // "Wed, Apr 5, 2028, 5:00 PM MDT (2028-04-05T23:00:00Z)"
+  function formatTarget(utcMs, timeZone) {
+    var local = new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone, weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+    }).format(new Date(utcMs));
+    return local + ' (' + new Date(utcMs).toISOString().replace('.000Z', 'Z') + ')';
+  }
+
+  // Theme -> { apply: {key: color}, warnings: [...] }. supports(v) checks a CSS color.
+  function checkTheme(theme, supports) {
+    var apply = {}, warnings = [];
+    Object.keys(theme || {}).forEach(function (key) {
+      var v = theme[key];
+      if (THEME_KEYS.indexOf(key) < 0) {
+        warnings.push('CONFIG.theme.' + key + ' is not a known setting (known: ' + THEME_KEYS.join(', ') + ').');
+      } else if (typeof v !== 'string' || (supports && !supports(v))) {
+        warnings.push('CONFIG.theme.' + key + ': ' + JSON.stringify(v) + ' is not a valid CSS color; using the default.');
+      } else {
+        apply[key] = v;
+      }
+    });
+    return { apply: apply, warnings: warnings };
+  }
+
   // Remaining ms -> whole d/h/m/s. Seconds round up so the display reaches 0 exactly at
   // the end instant (a tick at 16:59:59.004 still has 1 s to go).
   function splitRemaining(ms) {
@@ -433,140 +455,251 @@ const CONFIG = {
 
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
   function summaryText(r) {
+    if (r.total === 0) return 'Countdown finished';
     return plural(r.days, 'day') + ', ' + plural(r.hours, 'hour') + ', ' + plural(r.minutes, 'minute');
   }
 
-  // Clock check: returns the skew (ms) to add to Date.now(), or null to leave the clock alone.
-  // The Date header has 1 s resolution (truncated), so add 500 ms plus half the round trip.
-  function computeSkew(dateHeader, ageHeader, sentAt, receivedAt) {
+  // Clock check: ms to add to the device clock, or null to leave it alone.
+  // sentAt/receivedAt are device-clock times around the request. The Date header has
+  // 1 s resolution (truncated), so add 500 ms plus half the round trip. Fastly's Age
+  // header is ignored: it stamps a fresh Date even on cache hits.
+  function computeSkew(dateHeader, sentAt, receivedAt) {
     if (!dateHeader) return null;
-    if (ageHeader && parseInt(ageHeader, 10) !== 0) return null; // served from a cache
+    var rtt = receivedAt - sentAt;
+    if (!(rtt >= 0 && rtt <= SECOND)) return null; // half-RTT error would rival the threshold
     var server = Date.parse(dateHeader);
-    if (isNaN(server) || receivedAt < sentAt) return null;
-    var skew = server + 500 + (receivedAt - sentAt) / 2 - receivedAt;
-    if (Math.abs(skew) > DAY) return null;    // implausible
-    if (Math.abs(skew) <= 2 * SECOND) return null;
+    if (isNaN(server)) return null;
+    var skew = server + 500 + rtt / 2 - receivedAt;
+    if (Math.abs(skew) > DAY) return null;          // implausible
+    if (Math.abs(skew) <= 2 * SECOND) return null;  // close enough: keep the device clock
     return Math.round(skew);
   }
 
-  window.CountdownBar = {
-    config: CONFIG, parseLocal: parseLocal, partsToFields: partsToFields, offsetAt: offsetAt,
-    zonedTimeToUtc: zonedTimeToUtc, splitRemaining: splitRemaining,
-    formatDays: formatDays, summaryText: summaryText, computeSkew: computeSkew
+  // ---------------------------------------------------------------------------
+  // The widget: applies CONFIG text to a .bar and runs its countdown.
+  // env is the clock/network seam (real browser by default; tests pass fakes).
+  // ---------------------------------------------------------------------------
+  function defaultEnv() {
+    var perf = window.performance && performance.now ? performance : Date;
+    return {
+      dateNow: function () { return Date.now(); },
+      perfNow: function () { return perf.now(); },
+      setTimeout: function (fn, ms) { return window.setTimeout(fn, ms); },
+      clearTimeout: function (id) { window.clearTimeout(id); },
+      fetch: /^https?:$/.test(location.protocol) && window.fetch ?
+        function (url, opts) { return window.fetch(url, opts); } : null,
+      url: location.href
+    };
+  }
+
+  function applyText(el, cfg) {
+    el.querySelector('.title-text').textContent = cfg.title || '';
+    el.querySelector('.title').hidden = !cfg.title;
+    var icon = el.querySelector('.title-icon');
+    if (cfg.icon === 'none') {
+      if (icon) icon.parentNode.removeChild(icon);
+    } else if (cfg.icon !== 'alarm') {
+      console.warn('CONFIG.icon: only "alarm" or "none" are available; showing "alarm".');
+    }
+
+    var timerTitle = el.querySelector('.timer-title');
+    timerTitle.textContent = cfg.timerTitle || '';
+    timerTitle.hidden = !cfg.timerTitle;
+
+    var button = el.querySelector('.button');
+    var link = typeof cfg.buttonLink === 'string' ? cfg.buttonLink.trim() : '';
+    el.querySelector('.button-text').textContent = cfg.buttonText || '';
+    button.hidden = !cfg.buttonText || !link;
+    if (link) {
+      button.href = link; // used as written, never prefixed (F5)
+      if (!/^[a-z][a-z0-9+.-]*:/i.test(link)) {
+        console.warn('CONFIG.buttonLink should start with a scheme such as "https://"; got ' + JSON.stringify(link) + '.');
+      }
+    }
+
+    var labels = cfg.labels || {};
+    Array.prototype.forEach.call(el.querySelectorAll('.unit[data-unit]'), function (unit) {
+      var label = labels[unit.getAttribute('data-unit')];
+      if (label != null) unit.querySelector('.unit-label').textContent = label;
+    });
+  }
+
+  function mount(el, cfg, env) {
+    env = env || defaultEnv();
+    var doc = el.ownerDocument;
+    applyText(el, cfg);
+
+    var units = {};
+    Array.prototype.forEach.call(el.querySelectorAll('.unit[data-unit]'), function (unit) {
+      units[unit.getAttribute('data-unit')] = unit.querySelector('.tiles');
+    });
+    var summary = el.querySelector('.timer-summary');
+    var button = el.querySelector('.button');
+    var hideOnDone = cfg.hideButtonOnDone === true && !button.hidden;
+    var shown = { days: '--', hours: '--', minutes: '--', seconds: '--' };
+    var lastSummary = null;
+
+    function makeTiles(container, count) {
+      while (container.firstChild) container.removeChild(container.firstChild);
+      for (var i = 0; i < count; i++) {
+        var tile = doc.createElement('span');
+        tile.className = 'tile';
+        container.appendChild(tile);
+      }
+    }
+
+    // Writes only the tiles whose digit changed; rebuilds days only when its length changes.
+    function showUnit(name, text) {
+      var old = shown[name];
+      if (old === text) return;
+      var container = units[name];
+      if (old.length !== text.length || container.children.length !== text.length) {
+        makeTiles(container, text.length);
+        old = '';
+      }
+      var tiles = container.children;
+      for (var i = 0; i < text.length; i++) {
+        if (old.charAt(i) !== text.charAt(i)) tiles[i].textContent = text.charAt(i);
+      }
+      shown[name] = text;
+    }
+
+    function render(r) {
+      showUnit('days', formatDays(r.days));
+      showUnit('hours', pad2(r.hours));
+      showUnit('minutes', pad2(r.minutes));
+      showUnit('seconds', pad2(r.seconds));
+      // Same computed value; the text itself only changes once a minute.
+      var text = summaryText(r);
+      if (text !== lastSummary) {
+        summary.textContent = text;
+        lastSummary = text;
+      }
+    }
+
+    var api = { render: render, error: null, target: null, done: false };
+    var target = resolveTarget(cfg);
+    if (target.error) {
+      api.error = target.error;
+      console.error('Countdown bar: ' + target.error);
+      return api; // leave the "--" placeholders
+    }
+    var endsAt = target.endsAt;
+    api.target = formatTarget(endsAt, target.zone);
+
+    // Clock correction is anchored to the monotonic clock: once the server time is
+    // known, now = serverEstimate + time elapsed since. If the device clock and the
+    // monotonic clock later disagree by > 2 s (OS clock fixed by NTP, or the monotonic
+    // clock paused during sleep), the anchor is dropped and the check runs again.
+    var anchor = null;
+    var rechecks = 0, slowRetries = 0;
+    var timer = null, done = false, stopped = false;
+
+    function now() {
+      var wall = env.dateNow();
+      if (!anchor) return wall;
+      var elapsed = env.perfNow() - anchor.perf;
+      if (Math.abs((wall - anchor.wall) - elapsed) > 2 * SECOND) {
+        anchor = null;
+        if (rechecks < 3) { rechecks++; env.setTimeout(checkClock, 0); }
+        return wall;
+      }
+      return anchor.server + elapsed;
+    }
+
+    function onVisibility() {
+      if (doc.hidden) { env.clearTimeout(timer); timer = null; }
+      else if (timer === null) tick();
+    }
+
+    function setDone(value) {
+      if (value === done) return;
+      done = api.done = value;
+      if (hideOnDone) button.hidden = value;
+      if (value) doc.removeEventListener('visibilitychange', onVisibility);
+      else doc.addEventListener('visibilitychange', onVisibility);
+    }
+
+    function tick() {
+      if (stopped) return;
+      env.clearTimeout(timer);
+      timer = null;
+      var r = splitRemaining(endsAt - now());
+      render(r);
+      setDone(r.total === 0);
+      if (!done && !doc.hidden) {
+        timer = env.setTimeout(tick, SECOND - (((now() % SECOND) + SECOND) % SECOND));
+      }
+    }
+
+    // Same-origin HEAD (spec 7.2). Every failure is silent. Returns the promise for tests.
+    function checkClock() {
+      if (!env.fetch || stopped) return null;
+      var sentPerf = env.perfNow();
+      return env.fetch(env.url, { method: 'HEAD', cache: 'no-store' }).then(function (res) {
+        var receivedPerf = env.perfNow(), receivedWall = env.dateNow();
+        var rtt = receivedPerf - sentPerf;
+        if (rtt > SECOND) { // too slow to trust: retry once, then give up
+          if (slowRetries++ < 1) env.setTimeout(checkClock, 30 * SECOND);
+          return;
+        }
+        var skew = computeSkew(res.headers.get('Date'), receivedWall - rtt, receivedWall);
+        anchor = skew === null ? null : { server: receivedWall + skew, perf: receivedPerf, wall: receivedWall };
+        setDone(false); // a fast device clock may have ended the countdown early
+        tick();
+      }).catch(function () {});
+    }
+
+    function stop() {
+      stopped = true;
+      env.clearTimeout(timer);
+      doc.removeEventListener('visibilitychange', onVisibility);
+    }
+
+    doc.addEventListener('visibilitychange', onVisibility);
+    tick(); // synchronous: real numbers before first paint
+
+    api.now = now;
+    api.tick = tick;
+    api.stop = stop;
+    api.checkClock = checkClock;
+    return api;
+  }
+
+  var api = window.CountdownBar = {
+    template: template, parseLocal: parseLocal, partsToFields: partsToFields, offsetAt: offsetAt,
+    zonedTimeToUtc: zonedTimeToUtc, checkTimeZone: checkTimeZone, resolveTarget: resolveTarget,
+    formatTarget: formatTarget, checkTheme: checkTheme, splitRemaining: splitRemaining,
+    formatDays: formatDays, summaryText: summaryText, computeSkew: computeSkew,
+    applyText: applyText, mount: mount
   };
 
   // ---------------------------------------------------------------------------
-  // Display and tick loop.
+  // Start.
   // ---------------------------------------------------------------------------
-  var units = {};
-  Array.prototype.forEach.call(bar.querySelectorAll('.unit[data-unit]'), function (unit) {
-    units[unit.getAttribute('data-unit')] = unit.querySelector('.tiles');
+  if (typeof CONFIG === 'undefined') {
+    console.error('Countdown bar: CONFIG did not load (look for a typo in the settings block).');
+    return;
+  }
+  api.config = CONFIG;
+  var root = document.documentElement;
+  if (CONFIG.lang) root.lang = CONFIG.lang;
+
+  var supportsColor = window.CSS && CSS.supports ? function (v) { return CSS.supports('color', v); } : null;
+  var theme = checkTheme(CONFIG.theme, supportsColor);
+  theme.warnings.forEach(function (w) { console.warn(w); });
+  Object.keys(theme.apply).forEach(function (key) {
+    root.style.setProperty('--' + key.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }), theme.apply[key]);
   });
-  var summary = bar.querySelector('.timer-summary');
-  var button = bar.querySelector('.button');
 
-  var shown = { days: '--', hours: '--', minutes: '--', seconds: '--' };
-  var lastSummary = '';
+  var main = api.main = mount(bar, CONFIG);
+  api.target = main.target;
+  if (!main.target) return;
+  console.info('Countdown target: ' + main.target);
 
-  function makeTiles(container, count) {
-    while (container.firstChild) container.removeChild(container.firstChild);
-    for (var i = 0; i < count; i++) {
-      var tile = document.createElement('span');
-      tile.className = 'tile';
-      container.appendChild(tile);
-    }
-  }
-
-  // Writes only the tiles whose digit changed; rebuilds days only when its length changes.
-  function showUnit(name, text) {
-    var old = shown[name];
-    if (old === text) return;
-    var container = units[name];
-    if (old.length !== text.length) {
-      makeTiles(container, text.length);
-      old = '';
-    }
-    var tiles = container.children;
-    for (var i = 0; i < text.length; i++) {
-      if (old.charAt(i) !== text.charAt(i)) tiles[i].textContent = text.charAt(i);
-    }
-    shown[name] = text;
-  }
-
-  function render(r) {
-    showUnit('days', formatDays(r.days));
-    showUnit('hours', pad2(r.hours));
-    showUnit('minutes', pad2(r.minutes));
-    showUnit('seconds', pad2(r.seconds));
-    // Same computed value, but the text only changes once a minute.
-    var text = summaryText(r);
-    if (text !== lastSummary) {
-      summary.textContent = text;
-      lastSummary = text;
-    }
-  }
-
-  var endsAt = NaN;
-  try {
-    var fields = parseLocal(CONFIG.endsAt);
-    if (!fields) throw new Error('CONFIG.endsAt must look like "2028-04-05T17:00", got ' + JSON.stringify(CONFIG.endsAt));
-    endsAt = zonedTimeToUtc(fields, CONFIG.timeZone);
-  } catch (err) {
-    console.error('Countdown bar: invalid end time.', err);
-  }
-  if (isNaN(endsAt)) return; // leave the "--" placeholders
-
-  var skew = 0;          // ms added to the device clock after the clock check
-  var timer = null;
-  var done = false;
-  var inView = true;
-
-  function now() { return Date.now() + skew; }
-
-  function tick() {
-    clearTimeout(timer);
-    timer = null;
-    var r = splitRemaining(endsAt - now());
-    render(r);
-    done = r.total === 0;
-    if (CONFIG.hideButtonOnDone && CONFIG.buttonText) button.hidden = done;
-    if (done) return;
-    if (!document.hidden && inView) {
-      timer = setTimeout(tick, SECOND - (((now() % SECOND) + SECOND) % SECOND));
-    }
-  }
-
-  function pause() { clearTimeout(timer); timer = null; }
-  function resume() { if (!done && timer === null && !document.hidden && inView) tick(); }
-
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) pause(); else resume();
-  });
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(function (entries) {
-      inView = entries[entries.length - 1].isIntersecting;
-      if (inView) resume(); else pause();
-    }).observe(bar);
-  }
-
-  tick(); // synchronous: real numbers before first paint
-
-  // Clock check after first paint (spec 7.2). Same-origin HEAD; every failure is silent.
-  function checkClock() {
-    if (!/^https?:$/.test(location.protocol) || !window.fetch) return;
-    var sentAt = Date.now();
-    fetch(location.href, { method: 'HEAD', cache: 'no-store' }).then(function (res) {
-      var s = computeSkew(res.headers.get('Date'), res.headers.get('Age'), sentAt, Date.now());
-      if (s !== null) {
-        skew = s;
-        done = false; // a fast device clock may have ended the countdown early
-        pause();
-        resume();
-      }
-    }).catch(function () {});
-  }
-  if (window.requestIdleCallback) requestIdleCallback(checkClock, { timeout: 3000 });
-  else setTimeout(checkClock, 1000);
+  // Clock check after first paint, when the browser is idle.
+  if (window.requestIdleCallback) requestIdleCallback(main.checkClock, { timeout: 3000 });
+  else setTimeout(main.checkClock, 1000);
 })();
 </script>
 </body>

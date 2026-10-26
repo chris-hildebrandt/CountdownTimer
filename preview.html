@@ -9,6 +9,10 @@
   h1 { font-size: 18px; margin: 0 0 4px; }
   h2 { font-size: 15px; margin: 28px 0 8px; }
   p { margin: 0 0 12px; max-width: 70ch; }
+  #target { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
+  .checks { max-width: 70ch; padding: 8px 12px; border: 1px solid #b8c4c4; background: #fff; }
+  .checks h2 { margin: 0 0 4px; }
+  .checks ul { margin: 0; padding-left: 20px; }
   figure { margin: 0 0 18px; overflow-x: auto; }
   figcaption { font: 12px/1.4 ui-monospace, Consolas, monospace; margin-bottom: 4px; }
   /* Dashed outline marks the embed box edge; the page background stands in for the Google Sites section. */
@@ -18,8 +22,19 @@
 </head>
 <body>
 <h1>Countdown Bar preview</h1>
-<p>index.html in iframes the size of Google Sites' embed box. Frames scrolled out of view pause
-  their countdown (by design) and resume when scrolled back.</p>
+<p id="target">Countdown target: (loading)</p>
+<p>index.html in iframes the size of Google Sites' embed box. Font: <span id="font-mode"></span>
+  (<a id="font-toggle" href="#"></a>).</p>
+
+<div class="checks">
+  <h2>Manual checks (need a real browser or device)</h2>
+  <ul>
+    <li>Chrome: Settings, Appearance, Customize fonts, minimum font size 16. Tiles grow, nothing clips.</li>
+    <li>Android Chrome with auto-dark (chrome://flags, "Auto Dark Mode for Web Contents"): tiles keep their colors.</li>
+    <li>Windows High Contrast (forced colors): tiles get outlines, button has a border.</li>
+    <li>Google Sites: the real embed on a test page, desktop and mobile preview; the button opens the redirect in a new tab.</li>
+  </ul>
+</div>
 
 <h2>Google Sites ratio (2.85 : 1)</h2>
 <div id="ratio"></div>
@@ -28,7 +43,7 @@
 <div id="pairs" class="pair"></div>
 
 <h2>Short boxes (below the recommended 110 px height)</h2>
-<div id="short"></div>
+<div id="short" class="pair"></div>
 
 <h2>Wider box (5 : 1)</h2>
 <div id="wide"></div>
@@ -36,12 +51,20 @@
 <script>
 (function () {
   'use strict';
+  var noLora = /[?&]nolora(&|$)/.test(location.search);
+  var src = noLora ? 'index.html?nolora' : 'index.html';
+  document.getElementById('font-mode').textContent = noLora ? 'Georgia fallback (Lora blocked)' : 'Lora';
+  var toggle = document.getElementById('font-toggle');
+  toggle.textContent = noLora ? 'show with Lora' : 'show the no-Lora fallback';
+  toggle.href = noLora ? 'preview.html' : 'preview.html?nolora';
+
   var groups = {
     ratio: [[360, 126], [600, 211], [900, 316], [1400, 491]],
-    pairs: [[599, 210], [600, 211], [899, 315], [900, 316]],
+    pairs: [[599, 210], [600, 211], [899, 315], [900, 316], [599, 120], [600, 120]],
     short: [[360, 60], [1200, 80]],
     wide:  [[1100, 220]]
   };
+  var first = null;
   Object.keys(groups).forEach(function (id) {
     var box = document.getElementById(id);
     groups[id].forEach(function (s) {
@@ -49,14 +72,27 @@
       var cap = document.createElement('figcaption');
       cap.textContent = s[0] + ' × ' + s[1];
       var frame = document.createElement('iframe');
-      frame.src = 'index.html';
+      frame.src = src;
       frame.width = s[0];
       frame.height = s[1];
       frame.title = 'Countdown bar at ' + s[0] + ' by ' + s[1];
       fig.appendChild(cap);
       fig.appendChild(frame);
       box.appendChild(fig);
+      if (!first) first = frame;
     });
+  });
+
+  // Same line the widget logs to the console, so each CONFIG edit can be sanity-checked.
+  first.addEventListener('load', function () {
+    var line = document.getElementById('target');
+    try {
+      var cb = first.contentWindow.CountdownBar;
+      line.textContent = cb && cb.target ? 'Countdown target: ' + cb.target :
+        'Countdown target: NONE. ' + ((cb && cb.main && cb.main.error) || 'The settings block did not load; see the console.');
+    } catch (err) {
+      line.textContent = 'Countdown target: open this page over http(s) to see it here (the widget also logs it to the console).';
+    }
   });
 })();
 </script>
