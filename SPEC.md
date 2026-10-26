@@ -214,8 +214,8 @@ Not called: analytics, tracking, external time servers, config files, Common Nin
 7. **One timer, aligned to the second:** `setTimeout` to the next whole second, recomputed from the clock.
 8. **Minimal DOM work:** elements created once; only changed digits are updated.
 9. **No layout thrash:** fixed tile sizes and tabular figures, plus `contain: layout paint` on tiles.
-10. **Sleeps when unseen:** stops while the tab is hidden or the bar is off-screen
-    (`visibilitychange`, `IntersectionObserver`) and resyncs on return.
+10. **Sleeps when unseen:** stops while the tab is hidden (`visibilitychange`) and resyncs
+    on return. (An off-screen pause was dropped; see 11a, step 3.)
 
 ## 8. Edge cases
 - End time already passed on load → done state immediately.
@@ -352,10 +352,21 @@ Found by code review and adversarial testing of step 1; each is owned by the ste
   whole script. Static markup shows `--` placeholders, never real-looking digits, so a
   failed script can't show a frozen, wrong countdown.
 - `requestIdleCallback` doesn't exist in Safari/iOS: fall back to `setTimeout`.
-- Clock check: the `Date` header has 1 s resolution (add ~0.5 s plus half the round trip);
-  ignore responses with a nonzero `Age`; if the Google Sites frame gives the widget an opaque
-  origin, `Date` may be unreadable (not CORS-safelisted). Then the check silently does
-  nothing, which is acceptable. Log `self.origin` and readability on the step 8 test page.
+- Clock check: the `Date` header has 1 s resolution (add ~0.5 s plus half the round trip).
+  Do **not** reject cached responses: probes showed GitHub Pages' CDN stamps a fresh `Date`
+  on cache hits too (rev 4's "ignore nonzero `Age`" rule would have disabled the correction).
+  Discard samples with a round trip over 1 s. Anchor the correction to the monotonic clock
+  (`performance.now()`), so an OS clock fix mid-session doesn't reintroduce an error. If the
+  Google Sites frame gives the widget an opaque origin, `Date` may be unreadable (not
+  CORS-safelisted). Then the check silently does nothing, which is acceptable. Log
+  `self.origin` and readability on the step 8 test page.
+- Config typos must show `--`, never a wrong countdown: `timeZone` is required and must be a
+  region name like `America/Boise` (abbreviations like `MST` and `Etc/` zones are rejected);
+  theme colors are validated; the resolved target time is logged and shown in `preview.html`
+  so every edit can be sanity-checked.
+- No off-screen pause: in testing, `IntersectionObserver` inside nested iframes didn't update
+  after the host page scrolled, which would freeze the countdown. Only the hidden-tab pause
+  remains (one update per second costs almost nothing).
 - `Intl` time math: use `hourCycle: "h23"` and still map hour 24 → 0; two-pass offset for
   DST; `tests.html` covers endsAt at 02:30 on DST-change days.
 - Days tiles: rebuild the days container only when its length changes. Update the screen
