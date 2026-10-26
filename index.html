@@ -5,6 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light only">
 <title>Countdown Bar</title>
+<script>
+// ======================= SETTINGS: edit here =======================
+// Text, link, end time and colors. Times are wall-clock time in timeZone.
+const CONFIG = {
+  title:            "Sister Hildebrandt- CALLED to SERVE!",
+  timerTitle:       "Be right back in....",
+  buttonText:       "send her LOVE",
+  buttonLink:       "https://chris-hildebrandt.github.io/missionary-email-redirect/",
+  hideButtonOnDone: false,
+  endsAt:           "2028-04-05T17:00",   // wall-clock time in timeZone
+  timeZone:         "America/Boise",      // IANA name, e.g. "America/Sao_Paulo"
+  lang:             "en",                 // language of the text above
+  labels:           { days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" },
+  icon:             "alarm",             // Material Symbols icon, inlined as SVG; "none" hides it
+  theme: {
+    background: "#ffffff", tileBg: "#5fe0b0", tileText: "#134e42",
+    labelText: "#1f6f5f", titleText: "#1d2a2a", timerTitleText: "#2b3a3a",
+    buttonBg: "#0f6b4f", buttonText: "#ffffff"
+  }
+  // phase 2 adds: missionMonths (18), modes, style, styles, slides (section 9)
+};
+// ====================================================================
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
@@ -13,7 +36,7 @@
     /* Opt out of forced/auto dark modes that would recolor the tiles. */
     color-scheme: only light;
 
-    /* Theme: names mirror CONFIG.theme (spec section 5). */
+    /* Theme defaults; CONFIG.theme overrides these at startup (camelCase -> --kebab-case). */
     --background: #ffffff;
     --tile-bg: #5fe0b0;
     --tile-text: #134e42;
@@ -124,7 +147,12 @@
     text-align: center;
     color: var(--title-text);
   }
+  /* Zero-width flex box: a long label overflows its unit centered instead of widening it. */
   .unit-label {
+    display: flex;
+    justify-content: center;
+    width: 0;
+    white-space: nowrap;
     margin-top: .3rem;
     font-size: .6rem;
     letter-spacing: .08em;
@@ -163,6 +191,8 @@
     .button:hover { background-image: linear-gradient(var(--hover-shade), var(--hover-shade)); }
   }
   .button:focus-visible { outline: 3px solid var(--button-bg); outline-offset: 3px; }
+
+  [hidden] { display: none !important; }
 
   .visually-hidden {
     position: absolute;
@@ -248,7 +278,61 @@
       </div>
     </div>
 
-    <a class="button" href="https://chris-hildebrandt.github.io/missionary-email-redirect/" target="_blank" rel="noopener">send her LOVE<span class="visually-hidden"> (opens in new tab)</span></a>
+    <a class="button" href="https://chris-hildebrandt.github.io/missionary-email-redirect/" target="_blank" rel="noopener"><span class="button-text">send her LOVE</span><span class="visually-hidden"> (opens in new tab)</span></a>
   </div>
+
+<script>
+(function () {
+  'use strict';
+  // ES2017 only (no ?. or ??): an old iPad must be able to parse this.
+
+  var root = document.documentElement;
+  var bar = document.querySelector('.bar');
+
+  function kebab(name) {
+    return name.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); });
+  }
+
+  function setText(selector, text) {
+    var el = bar.querySelector(selector);
+    if (!el) return null;
+    el.textContent = text;
+    return el;
+  }
+
+  function applyConfig(cfg) {
+    if (cfg.lang) root.lang = cfg.lang;
+
+    var theme = cfg.theme || {};
+    Object.keys(theme).forEach(function (key) {
+      root.style.setProperty('--' + kebab(key), theme[key]);
+    });
+
+    setText('.title-text', cfg.title);
+    bar.querySelector('.title').hidden = !cfg.title;
+    var icon = bar.querySelector('.title-icon');
+    if (cfg.icon === 'none') {
+      icon.parentNode.removeChild(icon);
+    } else if (cfg.icon !== 'alarm') {
+      console.warn('CONFIG.icon: only "alarm" or "none" are available; showing "alarm".');
+    }
+
+    setText('.timer-title', cfg.timerTitle).hidden = !cfg.timerTitle;
+
+    var button = bar.querySelector('.button');
+    setText('.button-text', cfg.buttonText);
+    button.href = cfg.buttonLink;
+    button.hidden = !cfg.buttonText;
+
+    var labels = cfg.labels || {};
+    Array.prototype.forEach.call(bar.querySelectorAll('.unit[data-unit]'), function (unit) {
+      var label = labels[unit.getAttribute('data-unit')];
+      if (label != null) unit.querySelector('.unit-label').textContent = label;
+    });
+  }
+
+  applyConfig(CONFIG);
+})();
+</script>
 </body>
 </html>
