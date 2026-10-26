@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Countdown Bar tests</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #1d2a2a; background: #fff; }
+  #summary { font-size: 18px; font-weight: 700; margin: 0 0 12px; }
+  .pass { color: #0f6b4f; }
+  .fail { color: #b00020; }
+  li { margin: 2px 0; }
+  code { font-size: 12px; }
+  iframe { width: 900px; max-width: 100%; height: 316px; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+<p id="summary">Running...</p>
+<!-- Kept above the results: the widget pauses itself while scrolled out of view. -->
+<iframe id="widget" src="index.html" title="Widget under test (index.html, unchanged)"></iframe>
+<ol id="results"></ol>
+
+<script>
+(function () {
+  'use strict';
+  var results = [];
+  var list = document.getElementById('results');
+
+  function report(name, ok, detail) {
+    results.push(ok);
+    var li = document.createElement('li');
+    li.className = ok ? 'pass' : 'fail';
+    li.textContent = (ok ? 'PASS ' : 'FAIL ') + name + (ok || !detail ? '' : ' — ' + detail);
+    list.appendChild(li);
+  }
+  function eq(name, actual, expected) {
+    var a = JSON.stringify(actual), e = JSON.stringify(expected);
+    report(name, a === e, 'expected ' + e + ', got ' + a);
+  }
+  function iso(ms) { return new Date(ms).toISOString(); }
+  function finish(extra) {
+    var failed = results.filter(function (r) { return !r; }).length;
+    var s = document.getElementById('summary');
+    s.textContent = (failed ? 'FAIL: ' + failed + ' of ' : 'PASS: all ') + results.length + ' tests' +
+      (failed ? ' failed' : ' passed') + (extra || '');
+    s.className = failed ? 'fail' : 'pass';
+    document.title = s.textContent;
+  }
+
+  var frame = document.getElementById('widget');
+  frame.addEventListener('load', function () {
+    try { run(); } catch (err) {
+      report('test run completed', false, 'threw ' + err.name + ': ' + err.message);
+      finish();
+    }
+  });
+
+  function run() {
+    var CB, doc;
+    try {
+      CB = frame.contentWindow.CountdownBar;
+      doc = frame.contentDocument;
+    } catch (err) {
+      report('access index.html from tests.html', false,
+        'blocked (' + err.name + '). Open over http(s), e.g. GitHub Pages or a local server, not file://.');
+      return finish();
+    }
+    if (!CB) {
+      report('window.CountdownBar exists', false, 'missing: the widget script failed (see console)');
+      return finish();
+    }
+
+    var DAY = 86400000, H = 3600000, M = 60000, S = 1000;
+    function zoned(str, tz) { return iso(CB.zonedTimeToUtc(CB.parseLocal(str), tz)); }
+
+    // parseLocal
+    eq('parseLocal minutes', CB.parseLocal('2028-04-05T17:00'),
+       { year: 2028, month: 4, day: 5, hour: 17, minute: 0, second: 0 });
+    eq('parseLocal seconds', CB.parseLocal('2028-04-05T17:00:30').second, 30);
+    eq('parseLocal rejects Feb 30', CB.parseLocal('2028-02-30T10:00'), null);
+    eq('parseLocal rejects month 13', CB.parseLocal('2028-13-01T00:00'), null);
+    eq('parseLocal rejects 24:00', CB.parseLocal('2028-04-05T24:00'), null);
+    eq('parseLocal rejects space separator', CB.parseLocal('2028-04-05 17:00'), null);
+    eq('parseLocal rejects garbage', CB.parseLocal('next April'), null);
+
+    // hour 24 mapping
+    eq('partsToFields maps hour 24 -> 0', CB.partsToFields([
+      { type: 'month', value: '4' }, { type: 'literal', value: '/' }, { type: 'day', value: '6' },
+      { type: 'literal', value: '/' }, { type: 'year', value: '2028' }, { type: 'literal', value: ', ' },
+      { type: 'hour', value: '24' }, { type: 'literal', value: ':' }, { type: 'minute', value: '00' },
+      { type: 'literal', value: ':' }, { type: 'second', value: '05' }
+    ]), { month: 4, day: 6, year: 2028, hour: 0, minute: 0, second: 5 });
+
+    // Zone conversion
+    eq('Boise summer (MDT, UTC-6): the real end time', zoned('2028-04-05T17:00', 'America/Boise'), '2028-04-05T23:00:00.000Z');
+    eq('Boise winter (MST, UTC-7)', zoned('2027-01-15T12:00', 'America/Boise'), '2027-01-15T19:00:00.000Z');
+    eq('Boise local midnight', zoned('2028-04-05T00:00', 'America/Boise'), '2028-04-05T06:00:00.000Z');
+    eq('Boise spring-forward: 01:59 (last MST minute)', zoned('2027-03-14T01:59', 'America/Boise'), '2027-03-14T08:59:00.000Z');
+    eq('Boise spring-forward gap: 02:30 does not exist -> 03:30 MDT', zoned('2027-03-14T02:30', 'America/Boise'), '2027-03-14T09:30:00.000Z');
+    eq('Boise spring-forward: 03:00 MDT', zoned('2027-03-14T03:00', 'America/Boise'), '2027-03-14T09:00:00.000Z');
+    eq('Boise fall-back overlap: 01:30 happens twice -> earlier (MDT)', zoned('2027-11-07T01:30', 'America/Boise'), '2027-11-07T07:30:00.000Z');
+    eq('Boise fall-back: 02:00 MST', zoned('2027-11-07T02:00', 'America/Boise'), '2027-11-07T09:00:00.000Z');
+    eq('Boise fall-back: 00:30 MDT', zoned('2027-11-07T00:30', 'America/Boise'), '2027-11-07T06:30:00.000Z');
+    eq('America/Sao_Paulo (UTC-3, no DST)', zoned('2028-04-05T17:00', 'America/Sao_Paulo'), '2028-04-05T20:00:00.000Z');
+    eq('UTC', zoned('2028-04-05T17:00', 'UTC'), '2028-04-05T17:00:00.000Z');
+    eq('Asia/Kolkata (UTC+5:30, crosses date line back)', zoned('2028-01-01T00:00', 'Asia/Kolkata'), '2027-12-31T18:30:00.000Z');
+    eq('offsetAt Boise summer', CB.offsetAt(Date.UTC(2028, 3, 5, 23), 'America/Boise'), -6 * H);
+    var badZone = false;
+    try { CB.zonedTimeToUtc(CB.parseLocal('2028-04-05T17:00'), 'Mars/Olympus'); } catch (e) { badZone = e.name === 'RangeError'; } // instanceof fails across frames
+    eq('invalid time zone throws RangeError', badZone, true);
+
+    // splitRemaining
+    function split(ms) { var r = CB.splitRemaining(ms); return [r.days, r.hours, r.minutes, r.seconds, r.total]; }
+    eq('split: exactly 0', split(0), [0, 0, 0, 0, 0]);
+    eq('split: negative -> zeros', split(-5 * S), [0, 0, 0, 0, 0]);
+    eq('split: NaN -> zeros', split(NaN), [0, 0, 0, 0, 0]);
+    eq('split: 1 ms rounds up to 1 s', split(1), [0, 0, 0, 1, 1]);
+    eq('split: exactly 1 day', split(DAY), [1, 0, 0, 0, 86400]);
+    eq('split: 1 day minus 1 s', split(DAY - S), [0, 23, 59, 59, 86399]);
+    eq('split: 1 day minus 1 ms (rounds up to 1 day)', split(DAY - 1), [1, 0, 0, 0, 86400]);
+    eq('split: 99 d 23:59:59', split(100 * DAY - S), [99, 23, 59, 59, 8639999]);
+    eq('split: exactly 100 days', split(100 * DAY), [100, 0, 0, 0, 8640000]);
+    eq('split: 528 d 00:43:55', split(528 * DAY + 43 * M + 55 * S), [528, 0, 43, 55, 45621835]);
+
+    // Days digit count (F2)
+    eq('days: 0 -> "00"', CB.formatDays(0), '00');
+    eq('days: 5 -> "05"', CB.formatDays(5), '05');
+    eq('days: 99 -> "99" (2 tiles)', CB.formatDays(99), '99');
+    eq('days: 100 -> "100" (3 tiles)', CB.formatDays(100), '100');
+    eq('days: 1000 -> "1000" (4 tiles)', CB.formatDays(1000), '1000');
+
+    // Screen-reader summary
+    eq('summary plural', CB.summaryText(CB.splitRemaining(528 * DAY + 43 * M)), '528 days, 0 hours, 43 minutes');
+    eq('summary singular', CB.summaryText(CB.splitRemaining(DAY + H + M)), '1 day, 1 hour, 1 minute');
+
+    // Clock check
+    var t0 = Date.UTC(2028, 0, 1, 12, 0, 0), date = new Date(t0).toUTCString();
+    eq('skew: no Date header -> null', CB.computeSkew(null, null, t0, t0 + 200), null);
+    eq('skew: unparseable Date -> null', CB.computeSkew('soon', null, t0, t0 + 200), null);
+    eq('skew: nonzero Age (cached) -> null', CB.computeSkew(date, '12', t0 - 5 * M, t0 - 5 * M + 200), null);
+    eq('skew: Age 0 is fine', CB.computeSkew(date, '0', t0 - 5 * M, t0 - 5 * M + 200), 5 * M + 500 + 100 - 200);
+    eq('skew: device 5 min slow -> about +5 min', CB.computeSkew(date, null, t0 - 5 * M, t0 - 5 * M + 200), 5 * M + 400);
+    eq('skew: device 5 min fast -> about -5 min', CB.computeSkew(date, null, t0 + 5 * M, t0 + 5 * M + 200), -5 * M + 400);
+    eq('skew: within 2 s -> null (keep device clock)', CB.computeSkew(date, null, t0, t0 + 200), null);
+    eq('skew: more than a day off -> null (implausible)', CB.computeSkew(date, null, t0 + 2 * DAY, t0 + 2 * DAY + 200), null);
+
+    // The live widget
+    var tiles = doc.querySelectorAll('.unit--days .tile');
+    var cfg = CB.config;
+    var expectDays = CB.formatDays(CB.splitRemaining(CB.zonedTimeToUtc(CB.parseLocal(cfg.endsAt), cfg.timeZone) - Date.now()).days);
+    eq('widget: days tile count matches', tiles.length, expectDays.length);
+    var digitsOnly = Array.prototype.every.call(doc.querySelectorAll('.tile'), function (t) { return /^\d$/.test(t.textContent); });
+    eq('widget: every tile shows a digit (no "-" placeholders)', digitsOnly, true);
+    eq('widget: summary filled', /^\d+ days?, \d+ hours?, \d+ minutes?$/.test(doc.querySelector('.timer-summary').textContent), true);
+    eq('widget: no aria-live', doc.querySelectorAll('[aria-live]').length, 0);
+
+    function secondsText() {
+      return Array.prototype.map.call(doc.querySelectorAll('.unit--seconds .tile'), function (t) { return t.textContent; }).join('');
+    }
+    var before = secondsText();
+    setTimeout(function () {
+      var after = secondsText();
+      report('widget: seconds tick (' + before + ' -> ' + after + ')', before !== after, 'did not change in 1.5 s');
+      finish();
+    }, 1500);
+  }
+})();
+</script>
+</body>
+</html>

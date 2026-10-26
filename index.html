@@ -254,25 +254,26 @@ const CONFIG = {
 
     <div class="timer" role="timer">
       <p class="timer-title">Be right back in....</p>
-      <span class="timer-summary visually-hidden">528 days, 0 hours, 43 minutes</span>
+      <!-- Placeholders only: the script fills real values before first paint. -->
+      <span class="timer-summary visually-hidden">Countdown unavailable</span>
       <div class="units" aria-hidden="true">
         <div class="unit unit--days" data-unit="days">
-          <div class="tiles"><span class="tile">5</span><span class="tile">2</span><span class="tile">8</span></div>
+          <div class="tiles"><span class="tile">-</span><span class="tile">-</span></div>
           <span class="unit-label">DAY</span>
         </div>
         <span class="colon">:</span>
         <div class="unit unit--hours" data-unit="hours">
-          <div class="tiles"><span class="tile">0</span><span class="tile">0</span></div>
+          <div class="tiles"><span class="tile">-</span><span class="tile">-</span></div>
           <span class="unit-label">HR</span>
         </div>
         <span class="colon">:</span>
         <div class="unit unit--minutes" data-unit="minutes">
-          <div class="tiles"><span class="tile">4</span><span class="tile">3</span></div>
+          <div class="tiles"><span class="tile">-</span><span class="tile">-</span></div>
           <span class="unit-label">MIN</span>
         </div>
         <span class="colon">:</span>
         <div class="unit unit--seconds" data-unit="seconds">
-          <div class="tiles"><span class="tile">5</span><span class="tile">5</span></div>
+          <div class="tiles"><span class="tile">-</span><span class="tile">-</span></div>
           <span class="unit-label">SEC</span>
         </div>
       </div>
@@ -332,6 +333,232 @@ const CONFIG = {
   }
 
   applyConfig(CONFIG);
+
+  // ---------------------------------------------------------------------------
+  // Pure time functions (exposed on window.CountdownBar for tests.html).
+  // ---------------------------------------------------------------------------
+  var SECOND = 1000, MINUTE = 60 * SECOND, HOUR = 60 * MINUTE, DAY = 24 * HOUR;
+
+  // "YYYY-MM-DDTHH:MM" or "...:SS" -> fields, or null if malformed/out of range.
+  function parseLocal(str) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(str).trim());
+    if (!m) return null;
+    var f = { year: +m[1], month: +m[2], day: +m[3], hour: +m[4], minute: +m[5], second: +(m[6] || 0) };
+    var probe = new Date(Date.UTC(f.year, f.month - 1, f.day));
+    if (probe.getUTCMonth() !== f.month - 1 || probe.getUTCDate() !== f.day ||
+        f.hour > 23 || f.minute > 59 || f.second > 59) return null;
+    return f;
+  }
+
+  // formatToParts output -> numeric fields. Some engines print midnight as "24"
+  // even with hourCycle h23, so map 24 -> 0 (the date part is already the new day).
+  function partsToFields(parts) {
+    var f = {};
+    parts.forEach(function (p) {
+      if (p.type !== 'literal') f[p.type] = parseInt(p.value, 10);
+    });
+    if (f.hour === 24) f.hour = 0;
+    return f;
+  }
+
+  var formatters = {};
+  function formatterFor(timeZone) {
+    if (!formatters[timeZone]) {
+      var opts = {
+        timeZone: timeZone, hourCycle: 'h23',
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric'
+      };
+      var fmt = new Intl.DateTimeFormat('en-US', opts);
+      // Engines that ignore hourCycle fall back to 12-hour AM/PM; force 24-hour instead.
+      if (fmt.resolvedOptions().hour12) {
+        delete opts.hourCycle;
+        opts.hour12 = false;
+        fmt = new Intl.DateTimeFormat('en-US', opts);
+      }
+      formatters[timeZone] = fmt;
+    }
+    return formatters[timeZone];
+  }
+
+  // UTC offset (ms) of timeZone at instant utcMs; throws RangeError for a bad zone.
+  function offsetAt(utcMs, timeZone) {
+    var f = partsToFields(formatterFor(timeZone).formatToParts(new Date(utcMs)));
+    var asUtc = Date.UTC(f.year, f.month - 1, f.day, f.hour, f.minute, f.second);
+    return asUtc - (utcMs - (((utcMs % SECOND) + SECOND) % SECOND));
+  }
+
+  // Wall-clock fields in timeZone -> UTC ms. Offsets are sampled a day before and
+  // after (pass 1); each candidate is kept only if the zone really has that
+  // offset at the resulting instant (pass 2). Rule, same as Temporal's "compatible":
+  //  - repeated time (fall back): the earlier instant;
+  //  - skipped time (spring forward): shifted forward by the gap (02:30 -> 03:30).
+  function zonedTimeToUtc(f, timeZone) {
+    var wall = Date.UTC(f.year, f.month - 1, f.day, f.hour, f.minute, f.second || 0);
+    var before = offsetAt(wall - DAY, timeZone);
+    var after = offsetAt(wall + DAY, timeZone);
+    var best = null;
+    [before, after].forEach(function (off) {
+      var t = wall - off;
+      if (offsetAt(t, timeZone) === off && (best === null || t < best)) best = t;
+    });
+    return best !== null ? best : wall - before;
+  }
+
+  // Remaining ms -> whole d/h/m/s. Seconds round up so the display reaches 0 exactly at
+  // the end instant (a tick at 16:59:59.004 still has 1 s to go).
+  function splitRemaining(ms) {
+    var total = ms > 0 ? Math.ceil(ms / SECOND) : 0;
+    return {
+      total: total,
+      days: Math.floor(total / 86400),
+      hours: Math.floor(total / 3600) % 24,
+      minutes: Math.floor(total / 60) % 60,
+      seconds: total % 60
+    };
+  }
+
+  function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+  // Days show at least 2 digits and grow as needed (F2).
+  function formatDays(n) { return pad2(n); }
+
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  function summaryText(r) {
+    return plural(r.days, 'day') + ', ' + plural(r.hours, 'hour') + ', ' + plural(r.minutes, 'minute');
+  }
+
+  // Clock check: returns the skew (ms) to add to Date.now(), or null to leave the clock alone.
+  // The Date header has 1 s resolution (truncated), so add 500 ms plus half the round trip.
+  function computeSkew(dateHeader, ageHeader, sentAt, receivedAt) {
+    if (!dateHeader) return null;
+    if (ageHeader && parseInt(ageHeader, 10) !== 0) return null; // served from a cache
+    var server = Date.parse(dateHeader);
+    if (isNaN(server) || receivedAt < sentAt) return null;
+    var skew = server + 500 + (receivedAt - sentAt) / 2 - receivedAt;
+    if (Math.abs(skew) > DAY) return null;    // implausible
+    if (Math.abs(skew) <= 2 * SECOND) return null;
+    return Math.round(skew);
+  }
+
+  window.CountdownBar = {
+    config: CONFIG, parseLocal: parseLocal, partsToFields: partsToFields, offsetAt: offsetAt,
+    zonedTimeToUtc: zonedTimeToUtc, splitRemaining: splitRemaining,
+    formatDays: formatDays, summaryText: summaryText, computeSkew: computeSkew
+  };
+
+  // ---------------------------------------------------------------------------
+  // Display and tick loop.
+  // ---------------------------------------------------------------------------
+  var units = {};
+  Array.prototype.forEach.call(bar.querySelectorAll('.unit[data-unit]'), function (unit) {
+    units[unit.getAttribute('data-unit')] = unit.querySelector('.tiles');
+  });
+  var summary = bar.querySelector('.timer-summary');
+  var button = bar.querySelector('.button');
+
+  var shown = { days: '--', hours: '--', minutes: '--', seconds: '--' };
+  var lastSummary = '';
+
+  function makeTiles(container, count) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+    for (var i = 0; i < count; i++) {
+      var tile = document.createElement('span');
+      tile.className = 'tile';
+      container.appendChild(tile);
+    }
+  }
+
+  // Writes only the tiles whose digit changed; rebuilds days only when its length changes.
+  function showUnit(name, text) {
+    var old = shown[name];
+    if (old === text) return;
+    var container = units[name];
+    if (old.length !== text.length) {
+      makeTiles(container, text.length);
+      old = '';
+    }
+    var tiles = container.children;
+    for (var i = 0; i < text.length; i++) {
+      if (old.charAt(i) !== text.charAt(i)) tiles[i].textContent = text.charAt(i);
+    }
+    shown[name] = text;
+  }
+
+  function render(r) {
+    showUnit('days', formatDays(r.days));
+    showUnit('hours', pad2(r.hours));
+    showUnit('minutes', pad2(r.minutes));
+    showUnit('seconds', pad2(r.seconds));
+    // Same computed value, but the text only changes once a minute.
+    var text = summaryText(r);
+    if (text !== lastSummary) {
+      summary.textContent = text;
+      lastSummary = text;
+    }
+  }
+
+  var endsAt = NaN;
+  try {
+    var fields = parseLocal(CONFIG.endsAt);
+    if (!fields) throw new Error('CONFIG.endsAt must look like "2028-04-05T17:00", got ' + JSON.stringify(CONFIG.endsAt));
+    endsAt = zonedTimeToUtc(fields, CONFIG.timeZone);
+  } catch (err) {
+    console.error('Countdown bar: invalid end time.', err);
+  }
+  if (isNaN(endsAt)) return; // leave the "--" placeholders
+
+  var skew = 0;          // ms added to the device clock after the clock check
+  var timer = null;
+  var done = false;
+  var inView = true;
+
+  function now() { return Date.now() + skew; }
+
+  function tick() {
+    clearTimeout(timer);
+    timer = null;
+    var r = splitRemaining(endsAt - now());
+    render(r);
+    done = r.total === 0;
+    if (CONFIG.hideButtonOnDone && CONFIG.buttonText) button.hidden = done;
+    if (done) return;
+    if (!document.hidden && inView) {
+      timer = setTimeout(tick, SECOND - (((now() % SECOND) + SECOND) % SECOND));
+    }
+  }
+
+  function pause() { clearTimeout(timer); timer = null; }
+  function resume() { if (!done && timer === null && !document.hidden && inView) tick(); }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) pause(); else resume();
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      inView = entries[entries.length - 1].isIntersecting;
+      if (inView) resume(); else pause();
+    }).observe(bar);
+  }
+
+  tick(); // synchronous: real numbers before first paint
+
+  // Clock check after first paint (spec 7.2). Same-origin HEAD; every failure is silent.
+  function checkClock() {
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) return;
+    var sentAt = Date.now();
+    fetch(location.href, { method: 'HEAD', cache: 'no-store' }).then(function (res) {
+      var s = computeSkew(res.headers.get('Date'), res.headers.get('Age'), sentAt, Date.now());
+      if (s !== null) {
+        skew = s;
+        done = false; // a fast device clock may have ended the countdown early
+        pause();
+        resume();
+      }
+    }).catch(function () {});
+  }
+  if (window.requestIdleCallback) requestIdleCallback(checkClock, { timeout: 3000 });
+  else setTimeout(checkClock, 1000);
 })();
 </script>
 </body>
