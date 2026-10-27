@@ -31,7 +31,7 @@
   <thead><tr><th>Pair</th><th>Foreground</th><th>Background</th><th>Sample</th><th>Ratio</th><th>Needs</th><th>Result</th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
-<iframe id="widget" src="index.html" title="Widget being checked (index.html, unchanged)"></iframe>
+<iframe id="widget" title="Widget being checked (index.html, unchanged)"></iframe>
 
 <script>
 (function () {
@@ -80,7 +80,9 @@
 
   function row(name, fg, bg, need, fgNote, bgNote) {
     total++;
-    var r = ratio(fg, bg), ok = r >= need;
+    var seeThrough = fg[3] < 1;
+    if (seeThrough) { fgNote = 'see-through: use a solid color'; fg = over(fg, bg); }
+    var r = ratio(fg, bg), ok = r >= need && !seeThrough;
     if (!ok) failed++;
     var tr = document.createElement('tr');
     function cell(text, cls) {
@@ -95,7 +97,7 @@
     cell(hex(bg) + (bgNote ? ' (' + bgNote + ')' : ''));
     var s = document.createElement('span');
     s.className = 'sample';
-    s.textContent = need < 4.5 ? '■ ring' : 'Aa 0123';
+    s.textContent = need < 4.5 ? 'â–  ring' : 'Aa 0123';
     s.style.color = hex(fg);
     s.style.background = hex(bg);
     cell('').appendChild(s);
@@ -147,6 +149,8 @@
     row('Focus ring (button color) vs background', buttonBg, bg, 3, 'non-text', '');
     finish();
   });
+  // Set src only after the listener is attached, so a fast load can't be missed.
+  frame.src = 'index.html';
 
   function finish() {
     var s = document.getElementById('summary');

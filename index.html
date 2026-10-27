@@ -445,6 +445,9 @@ const CONFIG = {
     return local + ' (' + new Date(utcMs).toISOString().replace('.000Z', 'Z') + ')';
   }
 
+  // Keywords CSS.supports accepts as colors but that would make tiles see-through or odd.
+  var CSS_WIDE = /^\s*(inherit|initial|unset|revert|revert-layer|currentcolor)\s*$/i;
+
   // Theme -> { apply: {key: color}, warnings: [...] }. supports(v) checks a CSS color.
   function checkTheme(theme, supports) {
     var apply = {}, warnings = [];
@@ -452,7 +455,7 @@ const CONFIG = {
       var v = theme[key];
       if (THEME_KEYS.indexOf(key) < 0) {
         warnings.push('CONFIG.theme.' + key + ' is not a known setting (known: ' + THEME_KEYS.join(', ') + ').');
-      } else if (typeof v !== 'string' || (supports && !supports(v))) {
+      } else if (typeof v !== 'string' || CSS_WIDE.test(v) || (supports && !supports(v))) {
         warnings.push('CONFIG.theme.' + key + ': ' + JSON.stringify(v) + ' is not a valid CSS color; using the default.');
       } else {
         apply[key] = v;
@@ -538,6 +541,9 @@ const CONFIG = {
     button.hidden = !cfg.buttonText || !link;
     if (link) {
       button.href = link; // used as written, never prefixed (F5)
+      // A mailto: link in a new tab leaves a blank tab behind; open it in place.
+      if (/^mailto:/i.test(link)) button.removeAttribute('target');
+      else button.target = '_blank';
       if (!/^[a-z][a-z0-9+.-]*:/i.test(link)) {
         console.warn('CONFIG.buttonLink should start with a scheme such as "https://"; got ' + JSON.stringify(link) + '.');
       }

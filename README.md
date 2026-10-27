@@ -11,15 +11,19 @@ Live address: **https://chris-hildebrandt.github.io/CountdownTimer/**
 
 ## Changing the settings (on github.com, no tools needed)
 
+**Edit on a computer.** Phones and Macs can turn `"` into curly quotes (“ ”), which breaks
+the settings (the timer shows `--`). Always check preview.html after an edit (step 6).
+
 1. Go to the repository on github.com and click **`index.html`**.
 2. Click the **pencil icon** (Edit this file).
 3. Near the top, find the block between the two lines of `=====` marked
    **SETTINGS: edit here**. Change only what is inside the quotes.
 4. Click **Commit changes...**, then **Commit changes** again.
-5. Wait about **10 minutes**, then reload the Google Site. (The site keeps a copy for up to
-   10 minutes, so an older version may show until then.)
+5. Wait about **10 minutes**, then reload the Google Site. (GitHub keeps a copy for up to
+   ~10 minutes, so an older version may show until then.)
 6. Sanity check: open **https://chris-hildebrandt.github.io/CountdownTimer/preview.html**.
    The **Countdown target** line at the top says exactly when the timer will hit zero.
+   **Check the weekday, date and AM/PM** on that line (`T05:00` is 5 AM, `T17:00` is 5 PM).
    If it says **NONE**, the settings have a mistake and the message says which one.
 
 ### Each setting
@@ -29,13 +33,13 @@ Live address: **https://chris-hildebrandt.github.io/CountdownTimer/**
 | `title` | Text on the left, beside the alarm-clock icon. `""` hides it. | `"Sister Hildebrandt- CALLED to SERVE!"` |
 | `timerTitle` | Small italic line above the timer (hidden on phones). `""` hides it. | `"Be right back in...."` |
 | `buttonText` | Words on the button. `""` hides the button. | `"send her LOVE"` |
-| `buttonLink` | Where the button goes (opens in a new tab). Must start with `https://`. | `"https://chris-hildebrandt.github.io/missionary-email-redirect/"` |
+| `buttonLink` | Where the button goes. Should start with `https://` (opens in a new tab) or `mailto:` (opens the visitor's mail app; on some setups nothing happens, which is why the redirect page exists, so keep the redirect link). `""` hides the button. | `"https://chris-hildebrandt.github.io/missionary-email-redirect/"` |
 | `hideButtonOnDone` | `true` hides the button once the countdown reaches zero; `false` keeps it. No quotes. | `false` |
 | `endsAt` | When the countdown ends, as **year-month-dayThour:minute** (24-hour clock), in the time zone below. | `"2028-04-05T17:00"` = April 5, 2028, 5:00 PM |
 | `timeZone` | The time zone `endsAt` is written in. | `"America/Boise"`, `"America/Sao_Paulo"` |
 | `lang` | Language of the text (helps screen readers). | `"en"`, `"pt"` |
 | `labels` | Words under the timer. Keep them short. | `{ days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" }` |
-| `icon` | `"alarm"` shows the alarm clock, `"none"` hides it. | `"alarm"` |
+| `icon` | `"alarm"` shows the alarm clock (hidden on phones), `"none"` hides it. | `"alarm"` |
 | `theme` | Colors (see below). | `tileBg: "#5fe0b0"` |
 
 **Colors** (`theme`): `background` (the bar), `tileBg` / `tileText` (number tiles),
@@ -68,9 +72,12 @@ text back (or ask Chris).
 
 ## Putting it on the Google Site
 
+Do this on a **test page first** (see the Launch checklist); only after it passes, repeat
+on the real page.
+
 1. Edit the Google Site, then **Insert → Embed → By URL**.
-2. Paste **https://chris-hildebrandt.github.io/CountdownTimer/** and click **Insert**.
-   (Replace the old "Embed code" box, if there is one.)
+2. Paste **https://chris-hildebrandt.github.io/CountdownTimer/**. If asked, choose
+   **Whole page**, then **Insert**.
 3. **Resize**: click the embed once, then drag the blue dots on its edges.
    - Keep it **at least 110 pixels tall**; shorter boxes shrink the text.
    - Keep it **wide** (full width of the section works best). The layout adjusts by
@@ -95,6 +102,7 @@ started with `--allow-file-access-from-files`, so the GitHub Pages address is ea
 ## Launch checklist (step 8, for Chris)
 
 **Turn on GitHub Pages**
+- [ ] The repository is **Public** (Settings → General); free GitHub Pages needs that.
 - [ ] Repository **Settings → Pages → Build and deployment: Deploy from a branch →
       `main` / `(root)` → Save**. Wait a few minutes, then open the live address.
 - [ ] tests.html, contrast.html and preview.html all green on the live address.
@@ -105,7 +113,9 @@ started with `--allow-file-access-from-files`, so the GitHub Pages address is ea
 - [ ] Countdown matches https://time.gov to the second.
 - [ ] Still correct with the PC's time zone set to `America/Sao_Paulo`.
 - [ ] With the PC clock set 5 minutes wrong, still correct after a few seconds (clock check).
-- [ ] Done state: temporarily set `endsAt` 1 minute ahead, watch it reach zero, then set it back.
+- [ ] Done state: set `endsAt` about 15 minutes ahead, open preview.html after ~10 minutes
+      (once the change is live) and watch it reach zero. Then set `endsAt` back and confirm
+      preview.html's **Countdown target** line shows the real date again.
 - [ ] Correct at 360, 600, 900 and 1400 px wide in the Google Sites box, and in Google Sites' mobile preview.
 - [ ] Lighthouse (Chrome DevTools → Lighthouse) on the live address: performance ≥ 95, accessibility ≥ 95.
 - [ ] First visit ≤ 100 KB (DevTools → Network, cache disabled).
@@ -115,6 +125,8 @@ started with `--allow-file-access-from-files`, so the GitHub Pages address is ea
 - [ ] Chrome minimum font size 16: tiles grow, nothing clips.
 - [ ] Android Chrome auto-dark: tiles keep their colors.
 - [ ] Windows High Contrast: tiles get outlines, the button has a border.
+- [ ] Android phone: no visible jump or title re-wrap when the font loads (Android has no
+      Georgia, so the matched fallback doesn't apply there).
 
 **Record on the test page** (spec 11a), from the browser console with the widget's frame
 selected in DevTools:
@@ -126,4 +138,6 @@ selected in DevTools:
 - [ ] The button opens the redirect page **and the redirect finishes its job** (not just a
       new tab) from the embed on **iPhone**, **Android** and **PC**.
 
-Then: swap the real page's embed to **By URL** with the live address (step 9).
+**Final launch (step 9)**
+- [ ] On the real page, add the **By URL** embed with the live address (as above), then
+      **delete the old Common Ninja embed box**. Preview, then **Publish**.
