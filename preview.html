@@ -39,13 +39,13 @@
 <h2>Google Sites ratio (2.85 : 1)</h2>
 <div id="ratio"></div>
 
-<h2>Breakpoint pairs (1 px apart: sizes should not jump)</h2>
+<h2>Layout switch at 5 : 1 (stacked vs. side by side: digit size should not jump)</h2>
 <div id="pairs" class="pair"></div>
 
 <h2>Short boxes (below the recommended 110 px height)</h2>
 <div id="short" class="pair"></div>
 
-<h2>Wider box (5 : 1)</h2>
+<h2>Wide boxes (side by side)</h2>
 <div id="wide"></div>
 
 <script>
@@ -60,9 +60,9 @@
 
   var groups = {
     ratio: [[360, 126], [600, 211], [900, 316], [1400, 491]],
-    pairs: [[599, 210], [600, 211], [899, 315], [900, 316], [599, 120], [600, 120]],
+    pairs: [[1000, 201], [1000, 199]],
     short: [[360, 60], [1200, 80]],
-    wide:  [[1100, 220]]
+    wide:  [[1100, 150], [1400, 200]]
   };
   var first = null;
   Object.keys(groups).forEach(function (id) {

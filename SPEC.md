@@ -115,6 +115,12 @@ The saved page files stay out of git (see `.gitignore`); they hold a private sit
 | Unit label | Small caps, letter-spaced, `#1e6c93`. |
 | Button | Radius 8 px, fill `#1e6c93` (the site's blue), Lora 600 white; hover darkens 8%; 3 px focus ring. |
 
+**Revised after launch (Oct 2026):** the title and timer title are removed (the site adds
+its own text), and the widget is two parts that fill the box: the ticker, and the button
+below it (beside it in boxes wider than 5:1). The progress bar (9.2) becomes the third part.
+Digit size = min(6.25vw, 23.8vh) stacked, min(4.76vw, 38.4vh) side by side. The title,
+timer-title and icon rows above, and section 6's breakpoints, are superseded.
+
 At the desktop size in the screenshot: title ~20 px, tiles ~30×38 px with ~24 px digits,
 button text ~17 px. Section 6 covers how sizes scale. All color pairs are checked
 for ≥ 4.5:1 contrast in build step 6.

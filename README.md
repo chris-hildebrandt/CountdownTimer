@@ -1,6 +1,6 @@
 # Countdown Bar
 
-A small countdown bar for Sister Hildebrandt's Google Site: a title, a ticking
+A countdown widget for Sister Hildebrandt's Google Site: a big flip-card
 **days : hours : minutes : seconds** timer, and a "send her LOVE" button that opens the
 email redirect page in a new tab. It is one web page (`index.html`) hosted free on
 GitHub Pages and shown on the Google Site through an embed.
@@ -30,8 +30,6 @@ the settings (the timer shows `--`). Always check preview.html after an edit (st
 
 | Setting | What it does | Example |
 |---|---|---|
-| `title` | Text on the left, beside the alarm-clock icon. `""` hides it. | `"Sister Hildebrandt- CALLED to SERVE!"` |
-| `timerTitle` | Small italic line above the timer (hidden on phones). `""` hides it. | `"Be right back in...."` |
 | `buttonText` | Words on the button. `""` hides the button. | `"send her LOVE"` |
 | `buttonLink` | Where the button goes. Should start with `https://` (opens in a new tab) or `mailto:` (opens the visitor's mail app; on some setups nothing happens, which is why the redirect page exists, so keep the redirect link). `""` hides the button. The scrambled address from the Google Sites link is added to the end of an `https://` link automatically. | `"https://chris-hildebrandt.github.io/missionary-email-redirect/"` |
 | `hideButtonOnDone` | `true` hides the button once the countdown reaches zero; `false` keeps it. No quotes. | `false` |
@@ -39,12 +37,11 @@ the settings (the timer shows `--`). Always check preview.html after an edit (st
 | `timeZone` | The time zone `endsAt` is written in. | `"America/Boise"`, `"America/Sao_Paulo"` |
 | `lang` | Language of the text (helps screen readers). | `"en"`, `"pt"` |
 | `labels` | Words under the timer. Keep them short. | `{ days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" }` |
-| `icon` | `"alarm"` shows the alarm clock (hidden on phones), `"none"` hides it. | `"alarm"` |
 | `theme` | Colors (see below). | `tileBg: "#f6efdf"` |
 | `flip` | `true` = the numbers flip like a split-flap clock; `false` = plain tiles. Visitors who turned on "reduce motion" always get plain tiles. | `true` |
 
 **Colors** (`theme`): `background` (the bar), `tileBg` / `tileText` (number tiles),
-`labelText` (DAY HR MIN SEC), `titleText` (title and colons), `timerTitleText`,
+`labelText` (DAY HR MIN SEC), `colonText` (the colons between numbers),
 `buttonBg` / `buttonText`. Pick colors at e.g. https://htmlcolorcodes.com and copy the
 `#` code. After changing colors, open the **contrast check** (below) to make sure
 everything is still easy to read.
@@ -61,9 +58,9 @@ everything is still easy to read.
 - **Dates**: two digits for month, day, hour and minute: `"2028-04-05T17:00"`.
 - If something is wrong, the timer shows `--` instead of a wrong countdown, so a
   mistake is obvious rather than silently wrong.
-- **Fallback text**: the title, button text and button link also appear lower in
+- **Fallback text**: the button text and button link also appear lower in
   `index.html` (marked "Fallback ... keep in sync with CONFIG"). They are shown only if the
-  settings block is broken. If you change the title or link, it is nice (not required)
+  settings block is broken. If you change the link, it is nice (not required)
   to change them there too.
 
 To undo a change: on github.com open `index.html`, click **History**, and copy the old
@@ -86,7 +83,8 @@ on the real page.
    still works, but the email page will say to open it from the family site. If asked,
    choose **Whole page**, then **Insert**.
 3. **Resize**: click the embed once, then drag the blue dots on its edges.
-   - Keep it **at least 110 pixels tall**; shorter boxes shrink the text.
+   - The numbers grow to fill the box. Wider than about 5 times its height, the button
+     moves beside the numbers instead of below them. Trim extra white space by making the box shorter.
    - Keep it **wide** (full width of the section works best). The layout adjusts by
      itself for phones, tablets and computers.
 4. Check it in **Preview** (the eye icon), both computer and phone views, then **Publish**.
@@ -133,7 +131,7 @@ started with `--allow-file-access-from-files`, so the GitHub Pages address is ea
 - [ ] Chrome minimum font size 16: tiles grow, nothing clips.
 - [ ] Android Chrome auto-dark: tiles keep their colors.
 - [ ] Windows High Contrast: tiles get outlines, the button has a border.
-- [ ] Android phone: no visible jump or title re-wrap when the font loads (Android has no
+- [ ] Android phone: no visible jump when the font loads (Android has no
       Georgia, so the matched fallback doesn't apply there).
 
 **Record on the test page** (spec 11a), from the browser console with the widget's frame

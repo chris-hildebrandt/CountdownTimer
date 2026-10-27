@@ -9,8 +9,6 @@
 // ======================= SETTINGS: edit here =======================
 // Text, link, end time and colors. Times are wall-clock time in timeZone.
 const CONFIG = {
-  title:            "Sister Hildebrandt- CALLED to SERVE!",
-  timerTitle:       "Be right back in....",
   buttonText:       "send her LOVE",
   buttonLink:       "https://chris-hildebrandt.github.io/missionary-email-redirect/",
   hideButtonOnDone: false,
@@ -18,10 +16,9 @@ const CONFIG = {
   timeZone:         "America/Boise",      // IANA name, e.g. "America/Sao_Paulo"
   lang:             "en",                 // language of the text above
   labels:           { days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" },
-  icon:             "alarm",             // Material Symbols icon, inlined as SVG; "none" hides it
   theme: {
     background: "#ffffff", tileBg: "#f6efdf", tileText: "#1b3a4b",
-    labelText: "#1e6c93", titleText: "#1d2a2a", timerTitleText: "#2b3a3a",
+    labelText: "#1e6c93", colonText: "#1d2a2a",
     buttonBg: "#1e6c93", buttonText: "#ffffff"
   },
   flip:             true,                 // animated flip cards; false = plain tiles
@@ -32,8 +29,8 @@ const CONFIG = {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Font CSS loads without blocking first paint; it applies when it arrives. -->
-<link id="lora" rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap"></noscript>
+<link id="lora" rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap"></noscript>
 <script>
   // Dev aid for preview.html: index.html?nolora shows the Georgia fallback.
   if (/[?&]nolora(&|$)/.test(location.search)) {
@@ -52,8 +49,7 @@ const CONFIG = {
     --tile-bg: #f6efdf;
     --tile-text: #1b3a4b;
     --label-text: #1e6c93;
-    --title-text: #1d2a2a;
-    --timer-title-text: #2b3a3a;
+    --colon-text: #1d2a2a;
     --button-bg: #1e6c93;
     --button-text: #ffffff;
     /* Derived, not part of the theme. */
@@ -67,7 +63,7 @@ const CONFIG = {
 
   /* Georgia scaled to Lora's widths and line metrics, so text doesn't wrap or jump
      while Lora loads (or if it never does). Measured in Edge against Lora:
-     bold title/button within 0.5%, regular/italic within 0.5%. Overrides are
+     bold digits/button within 0.5%, regular within 0.5%. Overrides are
      Lora's ascent 1.006 / descent 0.274 divided by size-adjust. */
   @font-face {
     font-family: "Lora Fallback"; font-weight: 400; font-style: normal;
@@ -75,31 +71,24 @@ const CONFIG = {
     size-adjust: 98%; ascent-override: 102.7%; descent-override: 28%; line-gap-override: 0%;
   }
   @font-face {
-    font-family: "Lora Fallback"; font-weight: 400; font-style: italic;
-    src: local("Georgia Italic"), local("Georgia-Italic");
-    size-adjust: 98.5%; ascent-override: 102.1%; descent-override: 27.8%; line-gap-override: 0%;
-  }
-  @font-face {
     font-family: "Lora Fallback"; font-weight: 500 900; font-style: normal;
     src: local("Georgia Bold"), local("Georgia-Bold");
     size-adjust: 91%; ascent-override: 110.5%; descent-override: 30.1%; line-gap-override: 0%;
   }
 
-  /* Sizing. 1rem = title size; every other size is in rem (or em of its own font-size),
-     so one font-size line per layout scales the whole bar.
-     - The three width formulas meet at the breakpoints (18.3px at 599/600, 14.2px at
-       899/900), so nothing jumps by more than a pixel when the layout switches.
-       The two-row layout shrinks slightly as it widens so it hands over to the
-       one-row layout, which needs the most width, at the size that still fits.
-     - ≥900: 14.2px at 900 (title fits one line), ~20px at 1400 (the reference), max 24px.
-     - The vh term only matters in short boxes: text shrinks instead of clipping.
-       Below ~110px tall at desktop widths it gets small; recommend at least 110px. */
-  html { font-size: clamp(9px, min(3.094px + 1.234vw, 15.5vh), 24px); }
+  /* Sizing. 1rem = digit size; every other size is in rem (or em of its own font-size),
+     so one font-size line per layout scales the whole widget to fill its box.
+     - Stacked (default): ticker on top, button below. Needs ~16rem wide, ~4.2rem tall.
+     - Row (boxes wider than 5:1): ticker and button side by side. ~21rem wide, ~2.6rem tall.
+     The layout that gives bigger digits wins: at 5:1 both give the same size. */
+  html { font-size: clamp(10px, min(6.25vw, 23.8vh), 160px); }
+  @media (min-aspect-ratio: 5/1) {
+    html { font-size: clamp(10px, min(4.76vw, 38.4vh), 160px); }
+  }
 
   html, body { width: 100%; height: 100%; margin: 0; background: transparent; }
   body {
     display: flex;
-    align-items: center;
     font-family: var(--font);
     overflow: hidden;
   }
@@ -107,49 +96,20 @@ const CONFIG = {
   .bar {
     box-sizing: border-box;
     width: 100%;
-    display: grid;
-    /* The columns line pairs with the areas line: keep them in step when reordering. */
-    grid-template-areas: "title timer button";
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-    gap: .5rem 1rem;
-    min-height: 6.15rem;
-    /* Side padding 4rem when there is room, down to 1rem near 900px. */
-    padding: .6rem clamp(1rem, (100vw - 61rem) / 2, 4rem);
-    background: var(--background);
-    box-shadow: 0 12px 24px -12px var(--shadow);
-  }
-
-  .title {
-    grid-area: title;
-    justify-self: start;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.2;
-    color: var(--title-text);
-  }
-  .title-icon { width: 1.25em; height: 1.25em; flex: none; margin-right: .35em; fill: currentColor; }
-  .title-text { min-width: 0; text-wrap: balance; overflow-wrap: anywhere; }
-
-  .timer {
-    grid-area: timer;
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    padding: .2rem;
+    background: var(--background);
   }
-  .timer-title {
-    margin: 0 0 .2rem;
-    font-size: .75rem;
-    font-style: italic;
-    font-weight: 400;
-    line-height: 1.2;
-    color: var(--timer-title-text);
+  .bar > * + * { margin-top: max(.3rem, 10px); }
+  @media (min-aspect-ratio: 5/1) {
+    .bar { flex-direction: row; }
+    .bar > * + * { margin-top: 0; margin-left: .8rem; }
   }
+
+  .timer { position: relative; }
 
   .units { display: flex; align-items: flex-start; }
   .unit { display: flex; flex-direction: column; align-items: center; }
@@ -160,18 +120,18 @@ const CONFIG = {
     box-sizing: border-box;
     width: 1.25em;
     height: 1.6em;
-    border-radius: 4px;
+    border-radius: .07em;
     background: var(--tile-bg);
     color: var(--tile-text);
     box-shadow: var(--tile-shadow);
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums lining-nums;
     line-height: 1.6em;
     text-align: center;
   }
-  .tile + .tile { margin-left: .2rem; }
-  /* Faint flip-card split line, as on the original. */
+  .tile + .tile { margin-left: .12em; }
+  /* Faint flip-card split line, until the flip cards take over. */
   .tile::after {
     content: "";
     position: absolute;
@@ -187,18 +147,18 @@ const CONFIG = {
   .tile .tick-flip {
     margin: 0; min-width: 0; width: 1.25em;
     letter-spacing: 0; text-indent: 0;
-    border-radius: 4px;
+    border-radius: .07em;
   }
   .tile .tick-flip-panel { background-color: var(--tile-bg); color: var(--tile-text); }
   .tile .tick-flip-card-shadow { display: none; }
   .colon {
-    width: .92em;
+    width: .8em;
     height: 1.6em;
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 700;
     line-height: 1.45em;
     text-align: center;
-    color: var(--title-text);
+    color: var(--colon-text);
   }
   /* Zero-width flex box: a long label overflows its unit centered instead of widening it. */
   .unit-label {
@@ -206,30 +166,28 @@ const CONFIG = {
     justify-content: center;
     width: 0;
     white-space: nowrap;
-    margin-top: .3rem;
-    font-size: max(.6rem, 11px);
+    margin-top: .3em;
+    font-size: clamp(10px, .26rem, 22px);
     letter-spacing: .08em;
     line-height: 1;
     color: var(--label-text);
   }
 
   .button {
-    grid-area: button;
-    justify-self: end;
     position: relative;
+    flex: none;
     box-sizing: border-box;
-    max-width: 13em;
-    padding: .5rem 1.05rem;
+    padding: .5em 1.2em;
     border: 2px solid transparent;
-    border-radius: 8px;
+    border-radius: .5em;
     background-color: var(--button-bg);
     color: var(--button-text);
-    font-size: .85rem;
+    font-size: clamp(13px, .34rem, 30px);
     font-weight: 600;
     line-height: 1.2;
     text-align: center;
     text-decoration: none;
-    text-wrap: balance;
+    white-space: nowrap;
     transition: background-color .15s ease;
   }
   /* Extends the hit area to at least 44px tall without growing the pill. */
@@ -258,44 +216,6 @@ const CONFIG = {
     border: 0;
   }
 
-  /* 600–899px: title and button on top, timer below. */
-  @media (max-width: 899px) {
-    html { font-size: clamp(9px, min(26.53px - 1.371vw, 12vh), 24px); }
-    .bar {
-      grid-template-areas: "title button" "timer timer";
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: .55rem 1rem;
-      padding: .6rem 1.5rem;
-    }
-    .timer { justify-self: center; }
-  }
-
-  /* <600px, and short wide boxes (≥4:1) up to 899px: timer on top, then a smaller
-     title and button side by side. */
-  @media (max-width: 599px), (max-width: 899px) and (min-aspect-ratio: 4/1) {
-    html { font-size: clamp(9px, min(4.9vw, 16vh), 18.3px); }
-    .bar {
-      /* Outer 1fr spacer columns center the title+button pair; the spanning timer
-         sizes against them, so it doesn't widen the button column. */
-      grid-template-areas: "timer timer timer timer" ". title button .";
-      grid-template-columns: minmax(0, 1fr) minmax(0, max-content) auto minmax(0, 1fr);
-      gap: .35rem 0;
-      padding: .3rem .5rem;
-      min-height: 0;
-    }
-    .title-icon, .timer-title { display: none; }
-    .title { font-size: .66rem; }
-    .timer { justify-self: center; }
-    .button { justify-self: start; margin-left: .6rem; font-size: .66rem; padding: .35rem .7rem; }
-    /* Hit area grows down and up only into the row gap, never over the SEC label. */
-    .button::before { top: -.35rem; transform: none; height: max(100% + .35rem, 44px); }
-  }
-  /* Short wide 600–899: same layout, but keep the 600–899 width formula so sizes stay
-     continuous with 599 and 900. */
-  @media (min-width: 600px) and (max-width: 899px) and (min-aspect-ratio: 4/1) {
-    html { font-size: clamp(9px, min(26.53px - 1.371vw, 16vh), 24px); }
-  }
-
   @media (forced-colors: active) {
     .tile { border: 1px solid CanvasText; }
   }
@@ -307,15 +227,7 @@ const CONFIG = {
 </head>
 <body>
   <div class="bar">
-    <p class="title">
-      <!-- Material Symbols Outlined "alarm", wght 400, fill 0 (Google, Apache 2.0) -->
-      <svg class="title-icon" viewBox="0 -960 960 960" aria-hidden="true" focusable="false"><path d="M480-80q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-440q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-800q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-440q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-80Zm0-360Zm112 168 56-56-128-128v-184h-80v216l152 152ZM224-866l56 56-170 170-56-56 170-170Zm512 0 170 170-56 56-170-170 56-56ZM480-160q117 0 198.5-81.5T760-440q0-117-81.5-198.5T480-720q-117 0-198.5 81.5T200-440q0 117 81.5 198.5T480-160Z"/></svg>
-      <!-- Fallback text, shown only if CONFIG fails to load: keep in sync with CONFIG. -->
-      <span class="title-text">Sister Hildebrandt- CALLED to SERVE!</span>
-    </p>
-
     <div class="timer" role="timer">
-      <p class="timer-title">Be right back in....</p>
       <!-- Placeholders only: the script fills real values before first paint. -->
       <span class="timer-summary visually-hidden">Countdown unavailable</span>
       <div class="units" aria-hidden="true">
@@ -351,8 +263,8 @@ const CONFIG = {
   // ES2017 only (no ?. or ??): an old iPad must be able to parse this.
 
   var SECOND = 1000, MINUTE = 60 * SECOND, HOUR = 60 * MINUTE, DAY = 24 * HOUR;
-  var THEME_KEYS = ['background', 'tileBg', 'tileText', 'labelText', 'titleText',
-                    'timerTitleText', 'buttonBg', 'buttonText'];
+  var THEME_KEYS = ['background', 'tileBg', 'tileText', 'labelText', 'colonText',
+                    'buttonBg', 'buttonText'];
   var bar = document.querySelector('.bar');
   var template = bar.cloneNode(true); // pristine markup, for tests
 
@@ -545,19 +457,6 @@ const CONFIG = {
   }
 
   function applyText(el, cfg, pageUrl) {
-    el.querySelector('.title-text').textContent = cfg.title || '';
-    el.querySelector('.title').hidden = !cfg.title;
-    var icon = el.querySelector('.title-icon');
-    if (cfg.icon === 'none') {
-      if (icon) icon.parentNode.removeChild(icon);
-    } else if (cfg.icon !== 'alarm') {
-      console.warn('CONFIG.icon: only "alarm" or "none" are available; showing "alarm".');
-    }
-
-    var timerTitle = el.querySelector('.timer-title');
-    timerTitle.textContent = cfg.timerTitle || '';
-    timerTitle.hidden = !cfg.timerTitle;
-
     var button = el.querySelector('.button');
     var link = typeof cfg.buttonLink === 'string' ? cfg.buttonLink.trim() : '';
     el.querySelector('.button-text').textContent = cfg.buttonText || '';
