@@ -40,7 +40,8 @@ the settings (the timer shows `--`). Always check preview.html after an edit (st
 | `lang` | Language of the text (helps screen readers). | `"en"`, `"pt"` |
 | `labels` | Words under the timer. Keep them short. | `{ days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" }` |
 | `icon` | `"alarm"` shows the alarm clock (hidden on phones), `"none"` hides it. | `"alarm"` |
-| `theme` | Colors (see below). | `tileBg: "#5fe0b0"` |
+| `theme` | Colors (see below). | `tileBg: "#f6efdf"` |
+| `flip` | `true` = the numbers flip like a split-flap clock; `false` = plain tiles. Visitors who turned on "reduce motion" always get plain tiles. | `true` |
 
 **Colors** (`theme`): `background` (the bar), `tileBg` / `tileText` (number tiles),
 `labelText` (DAY HR MIN SEC), `titleText` (title and colons), `timerTitleText`,

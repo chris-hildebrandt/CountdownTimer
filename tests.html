@@ -100,9 +100,11 @@
       var el = CB.template.cloneNode(true);
       return { el: el, api: CB.mount(el, cfg, env) };
     }
+    // A flip card holds several copies of its digit; read the value it shows.
+    function tileChar(t) { return t.flip ? String(t.flip.value) : t.textContent; }
     function tilesText(el) {
       return Array.prototype.map.call(el.querySelectorAll('.unit'), function (u) {
-        return Array.prototype.map.call(u.querySelectorAll('.tile'), function (t) { return t.textContent; }).join('');
+        return Array.prototype.map.call(u.querySelectorAll('.tile'), tileChar).join('');
       }).join(':');
     }
     var quiet = { error: win.console.error, warn: win.console.warn };
@@ -332,13 +334,13 @@
       } else {
         report('widget: days tile count (skipped: CONFIG end time changed)', true);
       }
-      var digitsOnly = Array.prototype.every.call(doc.querySelectorAll('.bar .tile'), function (t) { return /^\d$/.test(t.textContent); });
+      var digitsOnly = Array.prototype.every.call(doc.querySelectorAll('.bar .tile'), function (t) { return /^\d$/.test(tileChar(t)); });
       eq('widget: every tile shows a digit (no "-" placeholders)', digitsOnly, true);
       eq('widget: summary filled', /^\d+ days?, \d+ hours?, \d+ minutes?$/.test(doc.querySelector('.bar .timer-summary').textContent), true);
       eq('widget: no aria-live', doc.querySelectorAll('[aria-live]').length, 0);
 
       function seconds() {
-        return parseInt(Array.prototype.map.call(doc.querySelectorAll('.bar .unit--seconds .tile'), function (t) { return t.textContent; }).join(''), 10);
+        return parseInt(Array.prototype.map.call(doc.querySelectorAll('.bar .unit--seconds .tile'), tileChar).join(''), 10);
       }
       var before = seconds();
       return new Promise(function (resolve) {

@@ -110,10 +110,10 @@ The saved page files stay out of git (see `.gitignore`); they hold a private sit
 | Bar | Background `#ffffff`, `box-shadow: 0 12px 24px -12px rgba(0,0,0,.25)`, square corners. |
 | Title | Lora 600, `#1d2a2a`; alarm icon before it. |
 | Timer title | Lora 400 italic, `#2b3a3a`, centered above the tiles. |
-| Digit tile | Radius 4 px, fill `#5fe0b0`, digit Lora 600 `#134e42`, tabular figures. |
+| Digit tile | Radius 4 px, cream paper fill `#f6efdf`, digit Lora 600 `#1b3a4b`, tabular figures, small drop shadow. Animated flip card (PQINA Flip 1.8.4, MIT) once the library loads after first paint; plain tile before that, with reduced motion, with `flip: false`, or if the CDN fails. |
 | Colon | Lora 700, `#1d2a2a`. |
-| Unit label | Small caps, letter-spaced, `#1f6f5f`. |
-| Button | Radius 8 px, fill `#0f6b4f`, Lora 600 white; hover darkens 8%; 3 px focus ring. |
+| Unit label | Small caps, letter-spaced, `#1e6c93`. |
+| Button | Radius 8 px, fill `#1e6c93` (the site's blue), Lora 600 white; hover darkens 8%; 3 px focus ring. |
 
 At the desktop size in the screenshot: title ~20 px, tiles ~30×38 px with ~24 px digits,
 button text ~17 px. Section 6 covers how sizes scale. All color pairs are checked
@@ -133,10 +133,11 @@ const CONFIG = {
   labels:           { days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" },
   icon:             "alarm",             // Material Symbols icon, inlined as SVG; "none" hides it
   theme: {
-    background: "#ffffff", tileBg: "#5fe0b0", tileText: "#134e42",
-    labelText: "#1f6f5f", titleText: "#1d2a2a",
-    buttonBg: "#0f6b4f", buttonText: "#ffffff"
-  }
+    background: "#ffffff", tileBg: "#f6efdf", tileText: "#1b3a4b",
+    labelText: "#1e6c93", titleText: "#1d2a2a", timerTitleText: "#2b3a3a",
+    buttonBg: "#1e6c93", buttonText: "#ffffff"
+  },
+  flip:             true,                 // animated flip cards; false = plain tiles
   // phase 2 adds: missionMonths (18), modes, style, styles, slides (section 9)
 };
 ```

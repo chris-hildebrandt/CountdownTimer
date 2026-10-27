@@ -20,10 +20,11 @@ const CONFIG = {
   labels:           { days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" },
   icon:             "alarm",             // Material Symbols icon, inlined as SVG; "none" hides it
   theme: {
-    background: "#ffffff", tileBg: "#5fe0b0", tileText: "#134e42",
-    labelText: "#1f6f5f", titleText: "#1d2a2a", timerTitleText: "#2b3a3a",
-    buttonBg: "#0f6b4f", buttonText: "#ffffff"
-  }
+    background: "#ffffff", tileBg: "#f6efdf", tileText: "#1b3a4b",
+    labelText: "#1e6c93", titleText: "#1d2a2a", timerTitleText: "#2b3a3a",
+    buttonBg: "#1e6c93", buttonText: "#ffffff"
+  },
+  flip:             true,                 // animated flip cards; false = plain tiles
   // phase 2 adds: missionMonths (18), modes, style, styles, slides (section 9)
 };
 // ====================================================================
@@ -48,15 +49,16 @@ const CONFIG = {
 
     /* Theme defaults; CONFIG.theme overrides these at startup (camelCase -> --kebab-case). */
     --background: #ffffff;
-    --tile-bg: #5fe0b0;
-    --tile-text: #134e42;
-    --label-text: #1f6f5f;
+    --tile-bg: #f6efdf;
+    --tile-text: #1b3a4b;
+    --label-text: #1e6c93;
     --title-text: #1d2a2a;
     --timer-title-text: #2b3a3a;
-    --button-bg: #0f6b4f;
+    --button-bg: #1e6c93;
     --button-text: #ffffff;
     /* Derived, not part of the theme. */
-    --tile-split: rgb(255 255 255 / .35);
+    --tile-split: rgb(0 0 0 / .14);
+    --tile-shadow: 0 1px 2px rgb(0 0 0 / .3);
     --shadow: rgb(0 0 0 / .25);
     --hover-shade: rgb(0 0 0 / .08);
 
@@ -161,6 +163,7 @@ const CONFIG = {
     border-radius: 4px;
     background: var(--tile-bg);
     color: var(--tile-text);
+    box-shadow: var(--tile-shadow);
     font-size: 1.2rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums lining-nums;
@@ -176,6 +179,18 @@ const CONFIG = {
     height: 1px;
     background: var(--tile-split);
   }
+  /* Flip cards (PQINA Flip, MIT): each tile hosts one card; Flip draws the panels.
+     Sized to the plain tile so nothing moves when the cards take over. */
+  .tile.is-flip { contain: layout; background: none; }
+  .tile.is-flip::after { content: none; }
+  .tile .tick { line-height: 1.6; }
+  .tile .tick-flip {
+    margin: 0; min-width: 0; width: 1.25em;
+    letter-spacing: 0; text-indent: 0;
+    border-radius: 4px;
+  }
+  .tile .tick-flip-panel { background-color: var(--tile-bg); color: var(--tile-text); }
+  .tile .tick-flip-card-shadow { display: none; }
   .colon {
     width: .92em;
     height: 1.6em;
@@ -579,12 +594,30 @@ const CONFIG = {
     var shown = { days: '--', hours: '--', minutes: '--', seconds: '--' };
     var lastSummary = null;
 
+    var Tick = null; // set by useFlip once the Flip library has loaded
+
+    // Turns a plain tile into a flip card showing the same character.
+    function flipTile(tile) {
+      var ch = tile.textContent;
+      tile.textContent = '';
+      tile.innerHTML = '<span data-view="flip"></span>';
+      tile.className = 'tile is-flip';
+      tile.flip = Tick.DOM.create(tile, { value: ch, credits: false });
+    }
+
+    function setTile(tile, ch) {
+      if (tile.flip) tile.flip.value = ch;
+      else tile.textContent = ch;
+    }
+
     function makeTiles(container, count) {
+      Array.prototype.forEach.call(container.children, function (t) { if (t.flip) Tick.DOM.destroy(t); });
       while (container.firstChild) container.removeChild(container.firstChild);
       for (var i = 0; i < count; i++) {
         var tile = doc.createElement('span');
         tile.className = 'tile';
         container.appendChild(tile);
+        if (Tick) flipTile(tile);
       }
     }
 
@@ -599,9 +632,18 @@ const CONFIG = {
       }
       var tiles = container.children;
       for (var i = 0; i < text.length; i++) {
-        if (old.charAt(i) !== text.charAt(i)) tiles[i].textContent = text.charAt(i);
+        if (old.charAt(i) !== text.charAt(i)) setTile(tiles[i], text.charAt(i));
       }
       shown[name] = text;
+    }
+
+    // Switches every tile to a flip card; later changes animate.
+    function useFlip(lib) {
+      if (Tick || !lib || !lib.DOM) return;
+      Tick = lib;
+      Object.keys(units).forEach(function (name) {
+        Array.prototype.forEach.call(units[name].children, flipTile);
+      });
     }
 
     function render(r) {
@@ -703,6 +745,7 @@ const CONFIG = {
     api.tick = tick;
     api.stop = stop;
     api.checkClock = checkClock;
+    api.useFlip = useFlip;
     return api;
   }
 
@@ -740,6 +783,29 @@ const CONFIG = {
   // Clock check after first paint, when the browser is idle.
   if (window.requestIdleCallback) requestIdleCallback(main.checkClock, { timeout: 3000 });
   else setTimeout(main.checkClock, 1000);
+
+  // Flip cards: the library loads after first paint and takes over the plain tiles once
+  // both files arrive. Skipped for reduced motion; if it fails, the plain tiles stay.
+  var reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (CONFIG.flip !== false && !reduceMotion && !main.done) {
+    var FLIP = 'https://cdn.jsdelivr.net/npm/@pqina/flip@1.8.4/dist/flip.min.';
+    var pending = 2;
+    var ready = function () { if (--pending === 0) main.useFlip(window.Tick); };
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = FLIP + 'css';
+    css.integrity = 'sha384-vEd3s8eSxp4KCHMLA0sPYDG3TIgKxansIbqYL1aJ2JdajJuzBMxop3i7zr5/ZPm8';
+    css.crossOrigin = 'anonymous';
+    css.onload = ready;
+    var js = document.createElement('script');
+    js.src = FLIP + 'js';
+    js.integrity = 'sha384-HcwMIjgF/WKYMSgxdxK3lsU0T/ohpwp7uSlpTOQK3I6+ya1mk5LNacJjq9dYcPmq';
+    js.crossOrigin = 'anonymous';
+    js.onload = ready;
+    // Before this page's own <style>, so the overrides above win on equal specificity.
+    document.head.insertBefore(css, document.head.querySelector('style'));
+    document.head.appendChild(js);
+  }
 })();
 </script>
 </body>
