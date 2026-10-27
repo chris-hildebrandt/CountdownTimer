@@ -174,13 +174,14 @@ and mobile preview.
 
 ### 7.2 Network calls
 
-**Phase 1, every page view: 4 requests, all GET or HEAD, no API calls.**
+**Phase 1, every page view: 5 requests, all GET or HEAD, no API calls.** (Measured after
+step 5: Lora is served as two variable-font files, one upright and one italic.)
 
 | # | Request | Host | Size | When | Cached |
 |---|---|---|---|---|---|
-| 1 | `index.html` (CSS and JS inline) | chris-hildebrandt.github.io | ~6 KB gzipped | Page load | 10 min |
+| 1 | `index.html` (CSS and JS inline) | chris-hildebrandt.github.io | ~10 KB gzipped | Page load | 10 min |
 | 2 | Lora font CSS | fonts.googleapis.com | ~1 KB | Page load | 1 day |
-| 3 | Lora font files (woff2, Latin subset) | fonts.gstatic.com | ~70–90 KB for 4 styles | Page load | 1 year |
+| 3 | Lora font files (woff2, Latin subset) | fonts.gstatic.com | ~61 KB, 2 files (upright + italic) | Page load | 1 year |
 | 4 | `HEAD` request to the widget's own URL (clock check) | chris-hildebrandt.github.io | ~0.5 KB, headers only | After the countdown is showing | Never (`no-store`) |
 
 **Clock correction (request 4):**
@@ -198,7 +199,7 @@ Not called: analytics, tracking, external time servers, config files, Common Nin
 
 ### 7.3 Performance plan
 
-**Budget (phase 1):** first visit ≤ 100 KB, ≤ 4 requests; real numbers on screen in under
+**Budget (phase 1):** first visit ≤ 100 KB (measured ~73 KB), ≤ 5 requests; real numbers on screen in under
 1 second on a mid-range phone over 4G; Lighthouse performance ≥ 95; layout shift (CLS) < 0.05.
 
 **Loading**
@@ -313,7 +314,7 @@ Brazil vistas, 8 s hold, 2 s cross-fade, translucent panel behind text for reada
 static photo for reduced motion, AVIF/WebP at two widths ≤ 120 KB each, loaded one at a time.
 
 ### 9.5 Phase 2 budget
-Widget code of our own stays under 15 KB gzipped. The default view keeps phase 1's 4 requests.
+Widget code of our own stays under 15 KB gzipped. The default view keeps phase 1's 5 requests.
 A non-default style adds its own files only when it's shown (sizes recorded during vetting),
 and each slide shown adds one image.
 
@@ -341,7 +342,7 @@ Each step is its own commit. I pause for your review after steps 1, 4 and 8.
 - [ ] Button opens the redirect page in a new tab from the Google Sites embed, on a PC and a phone.
 - [ ] Correct at 360, 600, 900 and 1400 px in the Google Sites aspect-ratio box, and in Google Sites mobile preview.
 - [ ] Lighthouse performance ≥ 95, accessibility ≥ 95.
-- [ ] First visit ≤ 100 KB, ≤ 4 requests.
+- [ ] First visit ≤ 100 KB, ≤ 5 requests.
 - [ ] All text ≥ 4.5:1 contrast.
 
 ## 11a. Review findings carried forward
@@ -391,6 +392,11 @@ Found by code review and adversarial testing of step 1; each is owned by the ste
 **Step 5 (performance)**
 - The Google Fonts stylesheet is render-blocking: load it with `preload` + `onload` swap and
   a `<noscript>` fallback. Tune Georgia `size-adjust` (fallback is 7–14 px wider at phone sizes).
+
+**Known, accepted after step 5 review**
+- Android has no Georgia, so the size-matched fallback font doesn't apply there; phones paint
+  in the default serif until Lora arrives. Checked manually on a real Android phone in step 8.
+- Georgia's digits stay old-style (uneven) in the fallback; cosmetic, only until Lora loads.
 
 **Step 8 (Google Sites test)**
 - Verify the redirect page completes its job (not just opens a tab) from the embed on
