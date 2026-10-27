@@ -30,10 +30,16 @@ const CONFIG = {
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link id="lora" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<!-- Font CSS loads without blocking first paint; it applies when it arrives. -->
+<link id="lora" rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap"></noscript>
 <script>
   // Dev aid for preview.html: index.html?nolora shows the Georgia fallback.
-  if (/[?&]nolora(&|$)/.test(location.search)) document.getElementById('lora').disabled = true;
+  if (/[?&]nolora(&|$)/.test(location.search)) {
+    var lora = document.getElementById('lora');
+    lora.onload = null;
+    lora.parentNode.removeChild(lora);
+  }
 </script>
 <style>
   :root {
@@ -54,7 +60,27 @@ const CONFIG = {
     --shadow: rgb(0 0 0 / .25);
     --hover-shade: rgb(0 0 0 / .08);
 
-    --font: "Lora", Georgia, "Times New Roman", serif;
+    --font: "Lora", "Lora Fallback", Georgia, "Times New Roman", serif;
+  }
+
+  /* Georgia scaled to Lora's widths and line metrics, so text doesn't wrap or jump
+     while Lora loads (or if it never does). Measured in Edge against Lora:
+     bold title/button within 0.5%, regular/italic within 0.5%. Overrides are
+     Lora's ascent 1.006 / descent 0.274 divided by size-adjust. */
+  @font-face {
+    font-family: "Lora Fallback"; font-weight: 400; font-style: normal;
+    src: local("Georgia");
+    size-adjust: 98%; ascent-override: 102.7%; descent-override: 28%; line-gap-override: 0%;
+  }
+  @font-face {
+    font-family: "Lora Fallback"; font-weight: 400; font-style: italic;
+    src: local("Georgia Italic"), local("Georgia-Italic");
+    size-adjust: 98.5%; ascent-override: 102.1%; descent-override: 27.8%; line-gap-override: 0%;
+  }
+  @font-face {
+    font-family: "Lora Fallback"; font-weight: 500 900; font-style: normal;
+    src: local("Georgia Bold"), local("Georgia-Bold");
+    size-adjust: 91%; ascent-override: 110.5%; descent-override: 30.1%; line-gap-override: 0%;
   }
 
   /* Sizing. 1rem = title size; every other size is in rem (or em of its own font-size),
