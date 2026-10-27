@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Countdown Bar contrast check</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; color: #1d2a2a; background: #fff; }
+  #summary { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+  p { max-width: 75ch; }
+  table { border-collapse: collapse; margin: 12px 0; }
+  th, td { border: 1px solid #c8d0d0; padding: 4px 8px; text-align: left; vertical-align: middle; }
+  th { background: #eef1f1; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { font-family: ui-monospace, Consolas, monospace; }
+  .sample { display: inline-block; min-width: 7em; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .pass { color: #0f6b4f; }
+  .fail { color: #b00020; }
+  ul#warnings li { color: #b00020; }
+  iframe { width: 900px; max-width: 100%; height: 316px; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+<p id="summary">Running...</p>
+<p>Checks every text and background color pair of the widget (index.html, with its current settings)
+  against WCAG 2 contrast: text needs at least 4.5 : 1, the keyboard focus ring at least 3 : 1.
+  Re-run after changing any color in the settings. Open over https (GitHub Pages);
+  from a local file the browser blocks it unless started with <code>--allow-file-access-from-files</code>.</p>
+<ul id="warnings"></ul>
+<table>
+  <thead><tr><th>Pair</th><th>Foreground</th><th>Background</th><th>Sample</th><th>Ratio</th><th>Needs</th><th>Result</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<iframe id="widget" src="index.html" title="Widget being checked (index.html, unchanged)"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  var frame = document.getElementById('widget');
+  var rows = document.getElementById('rows');
+  var warnings = document.getElementById('warnings');
+  var failed = 0, total = 0;
+
+  function warn(text) {
+    failed++;
+    var li = document.createElement('li');
+    li.textContent = text;
+    warnings.appendChild(li);
+  }
+
+  // Any CSS color -> [r, g, b, a] (0-255, a 0-1), via a 1x1 canvas.
+  var ctx = document.createElement('canvas').getContext('2d');
+  function rgba(css) {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = css;
+    ctx.fillRect(0, 0, 1, 1);
+    var d = ctx.getImageData(0, 0, 1, 1).data;
+    return [d[0], d[1], d[2], d[3] / 255];
+  }
+  // Paint a (possibly translucent) color over an opaque one.
+  function over(top, base) {
+    var a = top[3];
+    return [0, 1, 2].map(function (i) { return Math.round(top[i] * a + base[i] * (1 - a)); }).concat(1);
+  }
+  function luminance(c) {
+    var v = c.slice(0, 3).map(function (x) {
+      x /= 255;
+      return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  }
+  function ratio(a, b) {
+    var la = luminance(a), lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+  function hex(c) {
+    return '#' + c.slice(0, 3).map(function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join('');
+  }
+
+  function row(name, fg, bg, need, fgNote, bgNote) {
+    total++;
+    var r = ratio(fg, bg), ok = r >= need;
+    if (!ok) failed++;
+    var tr = document.createElement('tr');
+    function cell(text, cls) {
+      var td = document.createElement('td');
+      td.textContent = text;
+      if (cls) td.className = cls;
+      tr.appendChild(td);
+      return td;
+    }
+    cell(name);
+    cell(hex(fg) + (fgNote ? ' (' + fgNote + ')' : ''));
+    cell(hex(bg) + (bgNote ? ' (' + bgNote + ')' : ''));
+    var s = document.createElement('span');
+    s.className = 'sample';
+    s.textContent = need < 4.5 ? '■ ring' : 'Aa 0123';
+    s.style.color = hex(fg);
+    s.style.background = hex(bg);
+    cell('').appendChild(s);
+    cell(r.toFixed(2) + ' : 1', 'num');
+    cell(need + ' : 1', 'num');
+    cell(ok ? 'PASS' : 'FAIL', ok ? 'pass' : 'fail');
+    rows.appendChild(tr);
+  }
+
+  frame.addEventListener('load', function () {
+    var win, CB;
+    try {
+      win = frame.contentWindow;
+      CB = win.CountdownBar;
+      win.document.documentElement; // throws if blocked
+    } catch (err) {
+      warn('Cannot read index.html from this page (' + err.name + '). Open it over https, e.g. GitHub Pages.');
+      return finish();
+    }
+    if (!CB || !CB.config) { warn('The widget settings did not load (look for a typo in the settings block).'); return finish(); }
+
+    // Invalid colors in the settings (the widget ignores them and uses its defaults).
+    var supports = function (v) { return win.CSS.supports('color', v); };
+    CB.checkTheme(CB.config.theme, supports).warnings.forEach(warn);
+    var theme = CB.config.theme || {};
+    Object.keys(theme).forEach(function (k) {
+      if (typeof theme[k] === 'string' && supports(theme[k]) && rgba(theme[k])[3] < 1) {
+        warn('CONFIG.theme.' + k + ': ' + JSON.stringify(theme[k]) + ' is see-through; use a solid color such as "#0f6b4f".');
+      }
+    });
+
+    // Effective colors: the widget's CSS variables after the settings were applied.
+    var cs = win.getComputedStyle(win.document.documentElement);
+    function v(name) { return rgba(cs.getPropertyValue('--' + name).trim()); }
+    var bg = over(v('background'), [255, 255, 255, 1]); // the bar sits on a white page if see-through
+    var tileBg = over(v('tile-bg'), bg);
+    var buttonBg = over(v('button-bg'), bg);
+    var split = over(v('tile-split'), tileBg);
+    var hover = over(v('hover-shade'), buttonBg);
+
+    row('Title on background', v('title-text'), bg, 4.5);
+    row('Colons on background', v('title-text'), bg, 4.5);
+    row('Timer title on background', v('timer-title-text'), bg, 4.5);
+    row('Unit labels on background', v('label-text'), bg, 4.5);
+    row('Tile digits on tile', v('tile-text'), tileBg, 4.5);
+    row('Tile digits over the split line', v('tile-text'), split, 4.5, '', 'tile + split line');
+    row('Button text on button', v('button-text'), buttonBg, 4.5);
+    row('Button text on hover shade', v('button-text'), hover, 4.5, '', 'button + hover shade');
+    row('Focus ring (button color) vs background', buttonBg, bg, 3, 'non-text', '');
+    finish();
+  });
+
+  function finish() {
+    var s = document.getElementById('summary');
+    s.textContent = failed ? 'FAIL: ' + failed + ' problem' + (failed === 1 ? '' : 's') + ' (' + total + ' pairs checked)' :
+      'PASS: all ' + total + ' pairs pass';
+    s.className = failed ? 'fail' : 'pass';
+    document.title = s.textContent;
+  }
+})();
+</script>
+</body>
+</html>
