@@ -83,6 +83,15 @@ The saved page files stay out of git (see `.gitignore`); they hold a private sit
 - **F4** Done state: `00:00:00:00`; hide the button if `hideButtonOnDone` is on.
 - **F5** The button opens `buttonLink` in a new tab on desktop and mobile
   (`target="_blank" rel="noopener"`). Any URL scheme; nothing prefixed.
+- **F5a** Address pass-through: the email address is kept out of the current files of both
+  public repos (the redirect repo's older history still has it; accepted). The Google
+  Sites embed URL carries it scrambled (base64url) as `#to=<value>`; the widget appends that
+  `#to=<value>` to an http(s) `buttonLink` that has no `#` of its own, and the
+  `missionary-email-redirect` page reads it. The `#` part is never sent to a server or in a
+  Referer. Without it, the redirect page says to open it from the family site instead of breaking.
+  `embed-link.html` makes the embed URL from an address, in the browser only.
+  Order: the redirect change goes live only after the new embed is published, because the
+  Common Ninja button and old bookmarks have no `#to=` and would get the "missing" message.
 - **F6** All settings, colors and fonts live in one config block at the top of `index.html`.
 - **F7** Clock correction: if the viewer's device clock is off by more than 2 seconds,
   the countdown uses corrected time instead (section 7.2).
@@ -224,6 +233,8 @@ Not called: analytics, tracking, external time servers, config files, Common Nin
 - Days drop from 3 digits to 2 → leading tile removed once.
 - Invalid date in config → `--:--:--:--` and a console error, not a crash.
 - Clock check returns an implausible time (off by more than a day) → ignored.
+- `#to=` missing or malformed (not base64url) → button link used as written; the redirect page
+  shows "open this from the family site" (F5a).
 
 ---
 

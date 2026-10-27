@@ -250,6 +250,24 @@
     eq('buttonLink without scheme: warned, used as written', [warned.length, bare.el.querySelector('.button').getAttribute('href')], [1, 'example.com/love']);
     bare.api.stop();
 
+    // ---- address pass-through (F5a) ----
+    var R = 'https://example.test/redirect/';
+    eq('pass-through: #to= carried over', CB.passThrough(R, 'https://w.test/#to=YWJj-_9'), R + '#to=YWJj-_9');
+    eq('pass-through: #to= after another key', CB.passThrough(R, 'https://w.test/#x=1&to=YWJj'), R + '#to=YWJj');
+    eq('pass-through: no hash -> unchanged', CB.passThrough(R, 'https://w.test/'), R);
+    eq('pass-through: "xto=" is not "to=" -> unchanged', CB.passThrough(R, 'https://w.test/#xto=YWJj'), R);
+    eq('pass-through: not base64url -> unchanged', CB.passThrough(R, 'https://w.test/#to=a%40b.com'), R);
+    eq('pass-through: empty value -> unchanged', CB.passThrough(R, 'https://w.test/#to='), R);
+    eq('pass-through: "?to=" query is ignored', CB.passThrough(R, 'https://w.test/?to=YWJj'), R);
+    eq('pass-through: link with its own # -> unchanged', CB.passThrough(R + '#top', 'https://w.test/#to=YWJj'), R + '#top');
+    eq('pass-through: mailto link -> unchanged', CB.passThrough('mailto:a@b.com', 'https://w.test/#to=YWJj'), 'mailto:a@b.com');
+    eq('pass-through: no page url -> unchanged', CB.passThrough(R, undefined), R);
+    var envTo = fakeEnv({ real0: REAL0 });
+    envTo.url = 'https://example.test/#to=YWJj';
+    var withTo = mountFresh(cfgWith({ buttonLink: R }), envTo);
+    eq('pass-through: mounted button href carries #to=', withTo.el.querySelector('.button').getAttribute('href'), R + '#to=YWJj');
+    withTo.api.stop();
+
     // ---- clock check with a mock fetch ----
     function serverFetch(env, rtt, extraHeaders) {
       return function () {

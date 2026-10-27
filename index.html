@@ -521,7 +521,15 @@ const CONFIG = {
     };
   }
 
-  function applyText(el, cfg) {
+  // F5a: carry the page's "#to=<base64url>" (set in the private Google Sites embed URL) over
+  // to an http(s) button link without a "#" of its own, so the address lives only in the site.
+  function passThrough(link, pageUrl) {
+    var m = /#(?:[^#]*&)?to=([A-Za-z0-9_-]+)(?:&|$)/.exec(pageUrl || '');
+    if (!m || !/^https?:\/\//i.test(link) || link.indexOf('#') !== -1) return link;
+    return link + '#to=' + m[1];
+  }
+
+  function applyText(el, cfg, pageUrl) {
     el.querySelector('.title-text').textContent = cfg.title || '';
     el.querySelector('.title').hidden = !cfg.title;
     var icon = el.querySelector('.title-icon');
@@ -540,7 +548,7 @@ const CONFIG = {
     el.querySelector('.button-text').textContent = cfg.buttonText || '';
     button.hidden = !cfg.buttonText || !link;
     if (link) {
-      button.href = link; // used as written, never prefixed (F5)
+      button.href = passThrough(link, pageUrl); // never prefixed (F5)
       // A mailto: link in a new tab leaves a blank tab behind; open it in place.
       if (/^mailto:/i.test(link)) button.removeAttribute('target');
       else button.target = '_blank';
@@ -559,7 +567,7 @@ const CONFIG = {
   function mount(el, cfg, env) {
     env = env || defaultEnv();
     var doc = el.ownerDocument;
-    applyText(el, cfg);
+    applyText(el, cfg, env.url);
 
     var units = {};
     Array.prototype.forEach.call(el.querySelectorAll('.unit[data-unit]'), function (unit) {
@@ -703,7 +711,7 @@ const CONFIG = {
     zonedTimeToUtc: zonedTimeToUtc, checkTimeZone: checkTimeZone, resolveTarget: resolveTarget,
     formatTarget: formatTarget, checkTheme: checkTheme, splitRemaining: splitRemaining,
     formatDays: formatDays, summaryText: summaryText, computeSkew: computeSkew,
-    applyText: applyText, mount: mount
+    passThrough: passThrough, applyText: applyText, mount: mount
   };
 
   // ---------------------------------------------------------------------------

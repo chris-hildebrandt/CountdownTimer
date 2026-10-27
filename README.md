@@ -33,7 +33,7 @@ the settings (the timer shows `--`). Always check preview.html after an edit (st
 | `title` | Text on the left, beside the alarm-clock icon. `""` hides it. | `"Sister Hildebrandt- CALLED to SERVE!"` |
 | `timerTitle` | Small italic line above the timer (hidden on phones). `""` hides it. | `"Be right back in...."` |
 | `buttonText` | Words on the button. `""` hides the button. | `"send her LOVE"` |
-| `buttonLink` | Where the button goes. Should start with `https://` (opens in a new tab) or `mailto:` (opens the visitor's mail app; on some setups nothing happens, which is why the redirect page exists, so keep the redirect link). `""` hides the button. | `"https://chris-hildebrandt.github.io/missionary-email-redirect/"` |
+| `buttonLink` | Where the button goes. Should start with `https://` (opens in a new tab) or `mailto:` (opens the visitor's mail app; on some setups nothing happens, which is why the redirect page exists, so keep the redirect link). `""` hides the button. The scrambled address from the Google Sites link is added to the end of an `https://` link automatically. | `"https://chris-hildebrandt.github.io/missionary-email-redirect/"` |
 | `hideButtonOnDone` | `true` hides the button once the countdown reaches zero; `false` keeps it. No quotes. | `false` |
 | `endsAt` | When the countdown ends, as **year-month-dayThour:minute** (24-hour clock), in the time zone below. | `"2028-04-05T17:00"` = April 5, 2028, 5:00 PM |
 | `timeZone` | The time zone `endsAt` is written in. | `"America/Boise"`, `"America/Sao_Paulo"` |
@@ -76,8 +76,14 @@ Do this on a **test page first** (see the Launch checklist); only after it passe
 on the real page.
 
 1. Edit the Google Site, then **Insert → Embed → By URL**.
-2. Paste **https://chris-hildebrandt.github.io/CountdownTimer/**. If asked, choose
-   **Whole page**, then **Insert**.
+2. Paste the link made by the **Embed link maker**
+   (https://chris-hildebrandt.github.io/CountdownTimer/embed-link.html): type her email
+   address there and copy the link it gives. It is the widget's address plus `#to=…`, the
+   scrambled email address that the "send her LOVE" page needs. The address is kept only
+   in the private Google Site, never on GitHub. Scrambled is not secret: anyone who sees
+   the full link can read the address back, so keep the site private. Without the `#to=…` part the countdown
+   still works, but the email page will say to open it from the family site. If asked,
+   choose **Whole page**, then **Insert**.
 3. **Resize**: click the embed once, then drag the blue dots on its edges.
    - Keep it **at least 110 pixels tall**; shorter boxes shrink the text.
    - Keep it **wide** (full width of the section works best). The layout adjusts by
@@ -93,6 +99,7 @@ started with `--allow-file-access-from-files`, so the GitHub Pages address is ea
 
 | Page | Address | What it's for |
 |---|---|---|
+| Embed link maker | https://chris-hildebrandt.github.io/CountdownTimer/embed-link.html | Makes the link to paste into Google Sites, with her email address scrambled into the end. Nothing typed there leaves the page. |
 | Preview | https://chris-hildebrandt.github.io/CountdownTimer/preview.html | The widget at phone, tablet and computer sizes at once, plus the **Countdown target** line. Use after every settings change. |
 | Contrast check | https://chris-hildebrandt.github.io/CountdownTimer/contrast.html | Checks that every text color is readable on its background. Use after changing colors; everything should say PASS. |
 | Tests | https://chris-hildebrandt.github.io/CountdownTimer/tests.html | Checks the time math (time zones, daylight saving, clock correction). Should say **PASS: all ... tests passed**. |
@@ -136,8 +143,16 @@ selected in DevTools:
       (prints a date, or `null` = clock check silently off, which is acceptable).
 - [ ] Scroll the widget off screen and back, and switch tabs and back: the seconds keep counting correctly.
 - [ ] The button opens the redirect page **and the redirect finishes its job** (not just a
-      new tab) from the embed on **iPhone**, **Android** and **PC**.
+      new tab) from the embed on **iPhone**, **Android** and **PC**, showing her address.
+      If it says "open it from the family website", Google Sites dropped the `#to=…` part:
+      use **Insert → Embed → Embed code** with
+      `<iframe src="PASTE THE LINK HERE" style="border:0;width:100%;height:100%"></iframe>` instead.
 
 **Final launch (step 9)**
-- [ ] On the real page, add the **By URL** embed with the live address (as above), then
+- [ ] On the real page, add the **By URL** embed with the link from the Embed link maker (as above), then
       **delete the old Common Ninja embed box**. Preview, then **Publish**.
+- [ ] **Only now** push the updated `missionary-email-redirect` page (the one that reads the
+      address from the link). Pushed earlier, the old Common Ninja button would show
+      "open it from the family website" instead of her address. Then click "send her LOVE"
+      on the real page once more to confirm. Old bookmarks of the email page stop working
+      from here on; the button on the site is the way in.

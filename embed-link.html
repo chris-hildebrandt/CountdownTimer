@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Embed link maker</title>
+<style>
+  body { margin: 0; padding: 24px 16px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #fff; color: #1d2a2a; }
+  main { max-width: 40rem; margin: 0 auto; }
+  label { display: block; font-weight: 600; margin: 0 0 6px; }
+  input, textarea { box-sizing: border-box; width: 100%; font: inherit; padding: 8px; border: 1px solid #6b7b7b; border-radius: 6px; }
+  textarea { height: 6em; word-break: break-all; }
+  button { font: inherit; margin: 8px 8px 0 0; padding: 8px 14px; border-radius: 6px; border: 0; background: #0f6b4f; color: #fff; cursor: pointer; }
+  p { line-height: 1.5; }
+  .note { color: #2b3a3a; font-size: 0.95em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Embed link maker</h1>
+  <p>Type her email address. This page makes the link to paste into Google Sites
+    (Insert → Embed → By URL). The address is scrambled into the end of the link, so it is
+    never stored on GitHub. Nothing you type leaves this page.</p>
+
+  <label for="addr">Her email address</label>
+  <input id="addr" type="email" autocomplete="off" spellcheck="false">
+
+  <p><label for="out">Link for Google Sites</label>
+  <textarea id="out" readonly></textarea>
+  <button type="button" id="copy">Copy link</button>
+  <a id="try" href="#" target="_blank" rel="noopener" hidden>Open it to try the button</a></p>
+
+  <p class="note" id="status"></p>
+  <p class="note">Only paste this link into the private family site. Anyone who has the full
+    link can read the address back out of it.</p>
+</main>
+<script>
+(function () {
+  'use strict';
+  var base = /^https?:$/.test(location.protocol) ?
+    new URL('./', location.href).href : 'https://chris-hildebrandt.github.io/CountdownTimer/';
+  var addr = document.getElementById('addr');
+  var out = document.getElementById('out');
+  var tryLink = document.getElementById('try');
+  var status = document.getElementById('status');
+
+  // Same format the redirect page decodes: UTF-8, base64url, no "=" padding.
+  function scramble(text) {
+    return btoa(unescape(encodeURIComponent(text)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function update() {
+    var text = addr.value.trim();
+    // Same check as the redirect page, so any link made here is one it accepts.
+    var ok = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(text);
+    out.value = ok ? base + '#to=' + scramble(text) : '';
+    tryLink.hidden = !ok;
+    if (ok) tryLink.href = out.value;
+    status.textContent = text && !ok ? 'That does not look like an email address yet.' : '';
+  }
+
+  addr.addEventListener('input', update);
+  document.getElementById('copy').addEventListener('click', function () {
+    if (!out.value) return;
+    out.select();
+    out.setSelectionRange(0, out.value.length); // iOS ignores select() on readonly fields
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(out.value).then(function () { status.textContent = 'Copied.'; },
+        function () { status.textContent = 'Press Ctrl+C (or Cmd+C) to copy the selected link.'; });
+    } else {
+      status.textContent = 'Press Ctrl+C (or Cmd+C) to copy the selected link.';
+    }
+  });
+})();
+</script>
+</body>
+</html>
