@@ -114,7 +114,7 @@ const CONFIG = {
   .timer { grid-area: timer; justify-self: center; }
   .button { grid-area: button; justify-self: center; align-self: center; }
   /* The bar spans the box (less a margin), not just the ticker, so progress is easy to see. */
-  .progress { grid-area: progress; width: calc(100vw - 2 * max(.6rem, 12px)); justify-self: center; }
+  .progress { grid-area: progress; width: calc(100vw - 20px); justify-self: center; }
   @media (min-aspect-ratio: 4/1) and (min-width: 600px) {
     /* Outer spacer columns take the bar's extra width, so ticker and button stay together. */
     .bar {
