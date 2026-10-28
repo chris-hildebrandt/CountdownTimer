@@ -44,6 +44,7 @@ the settings (the timer shows `--`). Always check preview.html after an edit (st
 
 **Colors** (`theme`): `background` (the bar), `tileBg` / `tileText` (number tiles),
 `labelText` (DAY HR MIN SEC), `colonText` (the colons between numbers),
+`progressTrack` (the unfilled part of the progress bar; the filled part uses `buttonBg`),
 `buttonBg` / `buttonText`. Pick colors at e.g. https://htmlcolorcodes.com and copy the
 `#` code. After changing colors, open the **contrast check** (below) to make sure
 everything is still easy to read.

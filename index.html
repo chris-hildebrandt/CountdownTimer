@@ -19,7 +19,7 @@ const CONFIG = {
   labels:           { days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" },
   theme: {
     background: "#ffffff", tileBg: "#f6efdf", tileText: "#1b3a4b",
-    labelText: "#1e6c93", colonText: "#1d2a2a",
+    labelText: "#1e6c93", colonText: "#1d2a2a", progressTrack: "#b7e1e4",
     buttonBg: "#1e6c93", buttonText: "#ffffff"
   },
   flip:             true,                 // animated flip cards; false = plain tiles
@@ -52,6 +52,7 @@ const CONFIG = {
     --tile-text: #1b3a4b;
     --label-text: #1e6c93;
     --colon-text: #1d2a2a;
+    --progress-track: #b7e1e4;
     --button-bg: #1e6c93;
     --button-text: #ffffff;
     /* Derived, not part of the theme. */
@@ -136,7 +137,7 @@ const CONFIG = {
     height: max(.25rem, 4px);
     border-radius: 999px;
     overflow: hidden;
-    background: var(--tile-bg);
+    background: var(--progress-track);
     box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12);
   }
   .progress-fill { width: 0; height: 100%; border-radius: inherit; background: var(--button-bg); }
@@ -330,7 +331,7 @@ const CONFIG = {
 
   var SECOND = 1000, MINUTE = 60 * SECOND, HOUR = 60 * MINUTE, DAY = 24 * HOUR;
   var THEME_KEYS = ['background', 'tileBg', 'tileText', 'labelText', 'colonText',
-                    'buttonBg', 'buttonText'];
+                    'progressTrack', 'buttonBg', 'buttonText'];
   var bar = document.querySelector('.bar');
   var template = bar.cloneNode(true); // pristine markup, for tests
 

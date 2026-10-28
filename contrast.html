@@ -145,6 +145,7 @@
     row('Button text on button', v('button-text'), buttonBg, 4.5);
     row('Button text on hover shade', v('button-text'), hover, 4.5, '', 'button + hover shade');
     row('Focus ring (button color) vs background', buttonBg, bg, 3, 'non-text', '');
+    row('Progress fill (button color) vs track', buttonBg, v('progress-track'), 3, 'non-text', '');
     finish();
   });
   // Set src only after the listener is attached, so a fast load can't be missed.
