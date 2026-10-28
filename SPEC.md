@@ -300,8 +300,8 @@ Shows how much of the 18 months away has passed.
 
 **Built (Oct 2026), option A, as revised:** the start is configured as `startsAt`
 ("2026-10-05T17:00") rather than derived. The bar sits at the very bottom, under the button,
-as wide as the ticker (under both ticker and button in the side-by-side layout), and is half a
-digit tall. It fills in `buttonBg` on a `tileBg` track, with a small mark at each 6-week transfer
+as wide as the box less a small margin, and was half a
+digit tall, now a quarter (thinner reads better). It fills in `buttonBg` on a `tileBg` track, with a small mark at each 6-week transfer
 (13 marks; passed marks turn light). The text under it shows "4.0%" and switches to
 "day 23 of 548" on tap; the choice is kept per visitor (localStorage). `progress: false`
 hides it. No library, no requests.
