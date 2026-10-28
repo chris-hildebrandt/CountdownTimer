@@ -125,7 +125,46 @@ const CONFIG = {
     }
   }
 
-  .timer { position: relative; }
+  /* The full display and the single-number display share one cell; the one not in use is
+     invisible but keeps its space, so the widget doesn't change width between modes. */
+  .timer { position: relative; display: grid; border-radius: 6px; }
+  .units, .single { grid-area: 1 / 1; justify-self: center; }
+  .timer > .is-off { visibility: hidden; }
+  .timer.can-switch { cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+  .timer:focus-visible { outline: 2px solid var(--button-bg); outline-offset: 4px; }
+  .single { display: flex; flex-direction: column; align-items: center; }
+  .single .tiles { display: flex; }
+  .sep {
+    width: .32em;
+    height: 1.6em;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.95em;
+    text-align: center;
+    color: var(--colon-text);
+  }
+  .single-label {
+    margin-top: .3em;
+    font-size: clamp(9px, .26rem, 22px);
+    letter-spacing: .08em;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--label-text);
+  }
+  .mode-hint {
+    position: absolute;
+    left: 50%; bottom: 100%;
+    transform: translateX(-50%);
+    margin-bottom: .1em;
+    white-space: nowrap;
+    font-size: clamp(10px, .28rem, 22px);
+    letter-spacing: .04em;
+    color: var(--label-text);
+    opacity: 0;
+    transition: opacity .6s ease;
+    pointer-events: none;
+  }
+  .mode-hint.is-shown { opacity: .85; }
 
   /* Progress bar, a quarter digit tall, with a small mark at each 6-week transfer. The text
      under it is a button that switches percent <-> "day x of y". */
@@ -283,7 +322,7 @@ const CONFIG = {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .button { transition: none; }
+    .button, .mode-hint { transition: none; }
   }
 </style>
 </head>
@@ -313,6 +352,11 @@ const CONFIG = {
           <span class="unit-label">SEC</span>
         </div>
       </div>
+      <div class="single is-off" aria-hidden="true">
+        <div class="tiles"></div>
+        <span class="single-label"></span>
+      </div>
+      <span class="mode-hint" aria-hidden="true">tap to change</span>
     </div>
 
     <!-- Fallback link and text, shown only if CONFIG fails to load: keep in sync with CONFIG. -->
@@ -437,6 +481,48 @@ const CONFIG = {
     if (t >= end) return { pct: 100, day: total, total: total };
     return { pct: (t - start) / (end - start) * 100, day: Math.min(total, Math.floor((t - start) / DAY) + 1), total: total };
   }
+  // Measurement modes, cycled by tapping the timer. The page always opens on the first.
+  var MODES = ['full', 'months', 'transfers', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
+  var MODE_LABELS = { months: 'MONTHS', transfers: 'TRANSFERS', weeks: 'WEEKS', days: 'DAYS',
+                      hours: 'HOURS', minutes: 'MINUTES', seconds: 'SECONDS' };
+
+  // Whole calendar months from t to end in the zone's wall-clock time (Apr 5 -> May 5 is one).
+  function monthsBetween(t, end, zone) {
+    if (!(end > t)) return 0;
+    var fmt = formatterFor(zone);
+    var a = partsToFields(fmt.formatToParts(new Date(t)));
+    var b = partsToFields(fmt.formatToParts(new Date(end)));
+    var months = (b.year - a.year) * 12 + (b.month - a.month);
+    var ka = [a.day, a.hour, a.minute, a.second], kb = [b.day, b.hour, b.minute, b.second];
+    for (var i = 0; i < 4; i++) {
+      if (ka[i] !== kb[i]) { if (ka[i] > kb[i]) months--; break; }
+    }
+    return Math.max(0, months);
+  }
+
+  // Whole units left in a single-unit mode, rounded down. Transfers count the 6-week marks
+  // still ahead on the progress bar (or whole 42-day blocks when there is no start date).
+  function modeValue(mode, t, end, start, zone) {
+    var ms = end - t;
+    if (!(ms > 0)) return 0;
+    var secs = Math.ceil(ms / SECOND); // same rounding as the full display
+    switch (mode) {
+      case 'months': return monthsBetween(t, end, zone);
+      case 'transfers':
+        if (start == null) return Math.floor(ms / (42 * DAY));
+        var ahead = 0;
+        for (var mark = 42 * DAY; mark < end - start; mark += 42 * DAY) if (start + mark > t) ahead++;
+        return ahead;
+      case 'weeks': return Math.floor(secs / (7 * 86400));
+      case 'days': return Math.floor(secs / 86400);
+      case 'hours': return Math.floor(secs / 3600);
+      case 'minutes': return Math.floor(secs / 60);
+      default: return secs;
+    }
+  }
+  function groupDigits(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function modeLabel(label, n) { return n === 1 ? label.replace(/S$/, '') : label; }
+
   function progressText(p, mode) {
     return mode === 'days' ? 'day ' + p.day + ' of ' + p.total : p.pct.toFixed(1) + '%';
   }
@@ -561,14 +647,17 @@ const CONFIG = {
     var doc = el.ownerDocument;
     applyText(el, cfg, env.url);
 
+    // Tile containers by name: the four units of the full display, plus "single" for the
+    // one-number modes.
     var units = {};
     Array.prototype.forEach.call(el.querySelectorAll('.unit[data-unit]'), function (unit) {
       units[unit.getAttribute('data-unit')] = unit.querySelector('.tiles');
     });
+    units.single = el.querySelector('.single .tiles');
     var summary = el.querySelector('.timer-summary');
     var button = el.querySelector('.button');
     var hideOnDone = cfg.hideButtonOnDone === true && !button.hidden;
-    var shown = { days: '--', hours: '--', minutes: '--', seconds: '--' };
+    var shown = { days: '--', hours: '--', minutes: '--', seconds: '--', single: '' };
     var lastSummary = null;
 
     var Tick = null; // set by useFlip once the Flip library has loaded
@@ -587,29 +676,35 @@ const CONFIG = {
       else tile.textContent = ch;
     }
 
-    function makeTiles(container, count) {
+    // One cell per character: a tile per digit, a small separator per ",".
+    function makeTiles(container, text) {
       Array.prototype.forEach.call(container.children, function (t) { if (t.flip) Tick.DOM.destroy(t); });
       while (container.firstChild) container.removeChild(container.firstChild);
-      for (var i = 0; i < count; i++) {
-        var tile = doc.createElement('span');
-        tile.className = 'tile';
-        container.appendChild(tile);
-        if (Tick) flipTile(tile);
+      for (var i = 0; i < text.length; i++) {
+        var cell = doc.createElement('span');
+        if (text.charAt(i) === ',') {
+          cell.className = 'sep';
+          cell.textContent = ',';
+        } else {
+          cell.className = 'tile';
+          if (Tick) flipTile(cell);
+        }
+        container.appendChild(cell);
       }
     }
 
-    // Writes only the tiles whose digit changed; rebuilds days only when its length changes.
+    // Writes only the tiles whose digit changed; rebuilds only when the length changes.
     function showUnit(name, text) {
       var old = shown[name];
       if (old === text) return;
       var container = units[name];
       if (old.length !== text.length || container.children.length !== text.length) {
-        makeTiles(container, text.length);
+        makeTiles(container, text);
         old = '';
       }
-      var tiles = container.children;
+      var cells = container.children;
       for (var i = 0; i < text.length; i++) {
-        if (old.charAt(i) !== text.charAt(i)) setTile(tiles[i], text.charAt(i));
+        if (old.charAt(i) !== text.charAt(i) && text.charAt(i) !== ',') setTile(cells[i], text.charAt(i));
       }
       shown[name] = text;
     }
@@ -619,15 +714,34 @@ const CONFIG = {
       if (Tick || !lib || !lib.DOM) return;
       Tick = lib;
       Object.keys(units).forEach(function (name) {
-        Array.prototype.forEach.call(units[name].children, flipTile);
+        Array.prototype.forEach.call(units[name].querySelectorAll('.tile'), flipTile);
       });
     }
 
+    // Measurement modes: tap (or Enter/Space) on the timer cycles through cfg.modes.
+    var timerEl = el.querySelector('.timer');
+    var fullEl = el.querySelector('.units'), singleEl = el.querySelector('.single');
+    var singleLabel = el.querySelector('.single-label');
+    var modes = (Array.isArray(cfg.modes) ? cfg.modes : MODES).filter(function (m) {
+      return MODES.indexOf(m) >= 0;
+    });
+    if (!modes.length) modes = ['full'];
+    var modeIndex = 0, mode = modes[0];
+    var labelText = cfg.modeLabels || {};
+
+    function showMode() {
+      fullEl.classList.toggle('is-off', mode !== 'full');
+      singleEl.classList.toggle('is-off', mode === 'full');
+      timerEl.setAttribute('data-mode', mode);
+    }
+
     function render(r) {
-      showUnit('days', formatDays(r.days));
-      showUnit('hours', pad2(r.hours));
-      showUnit('minutes', pad2(r.minutes));
-      showUnit('seconds', pad2(r.seconds));
+      if (mode === 'full') {
+        showUnit('days', formatDays(r.days));
+        showUnit('hours', pad2(r.hours));
+        showUnit('minutes', pad2(r.minutes));
+        showUnit('seconds', pad2(r.seconds));
+      }
       // Same computed value; the text itself only changes once a minute.
       var text = summaryText(r);
       if (text !== lastSummary) {
@@ -677,6 +791,36 @@ const CONFIG = {
         lastProgress = null;
         renderProgress(now());
       });
+    }
+
+    function renderSingle(t) {
+      if (mode === 'full') return;
+      var n = modeValue(mode, t, endsAt, startsAt, target.zone);
+      showUnit('single', groupDigits(n));
+      singleLabel.textContent = modeLabel(labelText[mode] || MODE_LABELS[mode], n);
+    }
+
+    function nextMode() {
+      modeIndex = (modeIndex + 1) % modes.length;
+      mode = modes[modeIndex];
+      showMode();
+      hint.classList.remove('is-shown');
+      tick();
+    }
+
+    var hint = el.querySelector('.mode-hint');
+    showMode();
+    if (modes.length > 1) {
+      timerEl.tabIndex = 0;
+      timerEl.title = 'Tap to change units';
+      timerEl.classList.add('can-switch');
+      timerEl.addEventListener('click', nextMode);
+      timerEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nextMode(); }
+      });
+      // A brief hint after load, then it fades; the tooltip stays for later.
+      env.setTimeout(function () { hint.classList.add('is-shown'); }, 800);
+      env.setTimeout(function () { hint.classList.remove('is-shown'); }, 6000);
     }
 
     function renderProgress(t) {
@@ -739,6 +883,7 @@ const CONFIG = {
       var t = now();
       var r = splitRemaining(endsAt - t);
       render(r);
+      renderSingle(t);
       renderProgress(t);
       setDone(r.total === 0);
       if (!done && !doc.hidden) {
@@ -786,7 +931,8 @@ const CONFIG = {
     zonedTimeToUtc: zonedTimeToUtc, checkTimeZone: checkTimeZone, resolveTarget: resolveTarget,
     formatTarget: formatTarget, checkTheme: checkTheme, splitRemaining: splitRemaining,
     formatDays: formatDays, summaryText: summaryText, computeSkew: computeSkew,
-    progressAt: progressAt, progressText: progressText,
+    progressAt: progressAt, progressText: progressText, monthsBetween: monthsBetween,
+    modeValue: modeValue, groupDigits: groupDigits, modeLabel: modeLabel,
     passThrough: passThrough, applyText: applyText, mount: mount
   };
 

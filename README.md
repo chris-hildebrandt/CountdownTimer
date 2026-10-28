@@ -40,6 +40,7 @@ the settings (the timer shows `--`). Always check preview.html after an edit (st
 | `labels` | Words under the timer. Keep them short. | `{ days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" }` |
 | `theme` | Colors (see below). | `tileBg: "#f6efdf"` |
 | `flip` | `true` = the numbers flip like a split-flap clock; `false` = plain tiles. Visitors who turned on "reduce motion" always get plain tiles. | `true` |
+| `modes` | Optional. Which ways of counting visitors can tap through, in order. The page always opens on the first. Leave it out for all eight. | `["full", "months", "transfers", "weeks", "days", "hours", "minutes", "seconds"]` |
 | `progress` | `true` shows the progress bar at the bottom, with a small mark at each 6-week transfer. Visitors tap the percentage to switch to "day x of y". `false` hides it. | `true` |
 
 **Colors** (`theme`): `background` (the bar), `tileBg` / `tileText` (number tiles),

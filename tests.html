@@ -298,6 +298,41 @@
     eq('progress: progress false -> bar hidden', off.el.querySelector('.progress').hidden, true);
     off.api.stop();
 
+    // ---- measurement modes ----
+    var T0 = Date.UTC(2026, 9, 28, 0, 0, 0); // Oct 27 2026, 6:00 PM MDT
+    function mv(mode, t) { return CB.modeValue(mode, t, PE, PS, 'America/Boise'); }
+    eq('months: Oct 27 6 PM -> Apr 5 5 PM is 17 whole months', mv('months', T0), 17);
+    eq('months: exactly Mar 5 5 PM -> 1 month', mv('months', Date.UTC(2028, 2, 6, 0)), 1);
+    eq('months: one second later -> 0', mv('months', Date.UTC(2028, 2, 6, 0, 0, 1)), 0);
+    eq('months: Jan 31 -> Apr 5 is 2 (Feb 29 2028 handled)', CB.monthsBetween(Date.UTC(2028, 0, 31, 12), Date.UTC(2028, 3, 5, 12), 'UTC'), 2);
+    eq('transfers: marks ahead at Oct 27 (none passed yet)', mv('transfers', T0), 13);
+    eq('transfers: just past the first mark -> 12', mv('transfers', PS + 42 * DAY + S), 12);
+    eq('transfers: no start date -> whole 42-day blocks', CB.modeValue('transfers', T0, PE, null, 'America/Boise'), Math.floor((PE - T0) / (42 * DAY)));
+    eq('weeks / days / hours / minutes / seconds', ['weeks', 'days', 'hours', 'minutes', 'seconds'].map(function (m) { return mv(m, PE - (8 * DAY + 3 * H + 30 * S)); }),
+       [1, 8, 195, 11700, 702030]);
+    eq('every mode is 0 at the end', ['months', 'transfers', 'weeks', 'seconds'].map(function (m) { return mv(m, PE); }), [0, 0, 0, 0]);
+    eq('groupDigits', [CB.groupDigits(7), CB.groupDigits(12622), CB.groupDigits(45439412)], ['7', '12,622', '45,439,412']);
+    eq('modeLabel singular at 1 only', [CB.modeLabel('MONTHS', 1), CB.modeLabel('MONTHS', 0), CB.modeLabel('MONTHS', 2)], ['MONTH', 'MONTHS', 'MONTHS']);
+
+    var mm = mountFresh(cfgWith({}), fakeEnv({ real0: T0 }));
+    var timerEl = mm.el.querySelector('.timer');
+    function modeShown() {
+      var single = mm.el.querySelector('.single');
+      return single.classList.contains('is-off') ? 'full' :
+        Array.prototype.map.call(single.querySelectorAll('.tile, .sep'), tileChar).join('') + ' ' + single.querySelector('.single-label').textContent;
+    }
+    var seen = [modeShown()];
+    for (var k = 0; k < 8; k++) { timerEl.click(); seen.push(modeShown()); }
+    eq('modes: opens on full, taps cycle all 8 and wrap around', seen.map(function (s) { return s.replace(/^[\d,]+ /, '# '); }),
+       ['full', '# MONTHS', '# TRANSFERS', '# WEEKS', '# DAYS', '# HOURS', '# MINUTES', '# SECONDS', 'full']);
+    eq('modes: months value on the cards', seen[1], '17 MONTHS');
+    eq('modes: hours shown with a comma', /^\d\d,\d\d\d HOURS$/.test(seen[5]), true);
+    mm.api.stop();
+    var oneMode = mountFresh(cfgWith({ modes: ['days', 'bogus'] }), fakeEnv({ real0: T0 }));
+    eq('modes: custom list (unknown names dropped), single mode is not tappable',
+       [oneMode.el.querySelector('.single').classList.contains('is-off'), oneMode.el.querySelector('.timer').classList.contains('can-switch')], [false, false]);
+    oneMode.api.stop();
+
     // ---- clock check with a mock fetch ----
     function serverFetch(env, rtt, extraHeaders) {
       return function () {

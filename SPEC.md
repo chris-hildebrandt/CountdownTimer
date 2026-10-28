@@ -284,6 +284,15 @@ Display reads "MONTH" (singular) at exactly 1.
 - The owner can choose which modes appear and their order in the config.
 - Size: about 1.5 KB of extra JavaScript, no extra requests.
 
+**Built (Oct 2026), as revised:** tap (or Enter/Space) on the timer cycles the modes; no
+arrows. The choice is **not** remembered: the page always opens on the first mode (Full).
+Discovery: a "Tap to change units" tooltip plus a faint "tap to change" above the timer that
+fades out after about 5 seconds. Transfers counts the transfer marks still ahead on the
+progress bar (13 at launch), so it drops exactly when a mark is passed; without a start date
+it falls back to whole 42-day blocks. Single-unit modes use the same flip cards with small
+commas between digit groups; the full display keeps its space while hidden, so the widget
+doesn't change width between modes. Optional `modes` setting lists which modes appear, in order.
+
 ### 9.2 Progress indicator
 Shows how much of the 18 months away has passed.
 - **Start is derived, not configured:** start = `endsAt` minus `missionMonths` (18) calendar
