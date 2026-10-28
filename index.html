@@ -80,9 +80,11 @@ const CONFIG = {
      so one font-size line per layout scales the whole widget to fill its box.
      - Stacked (default): ticker on top, button below. Needs ~16rem wide, ~4.2rem tall.
      - Row (boxes wider than 5:1): ticker and button side by side. ~21rem wide, ~2.6rem tall.
-     The layout that gives bigger digits wins: at 5:1 both give the same size. */
-  html { font-size: clamp(10px, min(6.25vw, 23.8vh), 160px); }
-  @media (min-aspect-ratio: 5/1) {
+     The layout that gives bigger digits wins: at 5:1 both give the same size. Below 600px
+     wide it always stacks (Google Sites keeps the box's shape on phones), trading a little
+     digit size for a button that isn't squeezed in beside the numbers. */
+  html { font-size: clamp(8px, min(6.25vw, 23.8vh, (100vh - 44px) / 1.95), 160px); }
+  @media (min-aspect-ratio: 5/1) and (min-width: 600px) {
     html { font-size: clamp(10px, min(4.76vw, 38.4vh), 160px); }
   }
 
@@ -103,8 +105,8 @@ const CONFIG = {
     padding: .2rem;
     background: var(--background);
   }
-  .bar > * + * { margin-top: max(.3rem, 10px); }
-  @media (min-aspect-ratio: 5/1) {
+  .bar > * + * { margin-top: max(.3rem, 4px); }
+  @media (min-aspect-ratio: 5/1) and (min-width: 600px) {
     .bar { flex-direction: row; }
     .bar > * + * { margin-top: 0; margin-left: .8rem; }
   }
@@ -167,7 +169,7 @@ const CONFIG = {
     width: 0;
     white-space: nowrap;
     margin-top: .3em;
-    font-size: clamp(10px, .26rem, 22px);
+    font-size: clamp(9px, .26rem, 22px);
     letter-spacing: .08em;
     line-height: 1;
     color: var(--label-text);
@@ -182,7 +184,7 @@ const CONFIG = {
     border-radius: .5em;
     background-color: var(--button-bg);
     color: var(--button-text);
-    font-size: clamp(13px, .34rem, 30px);
+    font-size: clamp(11px, .34rem, 30px);
     font-weight: 600;
     line-height: 1.2;
     text-align: center;
