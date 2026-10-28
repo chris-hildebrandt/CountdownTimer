@@ -33,12 +33,14 @@ the settings (the timer shows `--`). Always check preview.html after an edit (st
 | `buttonText` | Words on the button. `""` hides the button. | `"send her LOVE"` |
 | `buttonLink` | Where the button goes. Should start with `https://` (opens in a new tab) or `mailto:` (opens the visitor's mail app; on some setups nothing happens, which is why the redirect page exists, so keep the redirect link). `""` hides the button. The scrambled address from the Google Sites link is added to the end of an `https://` link automatically. | `"https://chris-hildebrandt.github.io/missionary-email-redirect/"` |
 | `hideButtonOnDone` | `true` hides the button once the countdown reaches zero; `false` keeps it. No quotes. | `false` |
+| `startsAt` | When the mission started, same format as `endsAt`. The progress bar runs from here to `endsAt`. | `"2026-10-05T17:00"` |
 | `endsAt` | When the countdown ends, as **year-month-dayThour:minute** (24-hour clock), in the time zone below. | `"2028-04-05T17:00"` = April 5, 2028, 5:00 PM |
 | `timeZone` | The time zone `endsAt` is written in. | `"America/Boise"`, `"America/Sao_Paulo"` |
 | `lang` | Language of the text (helps screen readers). | `"en"`, `"pt"` |
 | `labels` | Words under the timer. Keep them short. | `{ days: "DAY", hours: "HR", minutes: "MIN", seconds: "SEC" }` |
 | `theme` | Colors (see below). | `tileBg: "#f6efdf"` |
 | `flip` | `true` = the numbers flip like a split-flap clock; `false` = plain tiles. Visitors who turned on "reduce motion" always get plain tiles. | `true` |
+| `progress` | `true` shows the progress bar at the bottom, with a small mark at each 6-week transfer. Visitors tap the percentage to switch to "day x of y". `false` hides it. | `true` |
 
 **Colors** (`theme`): `background` (the bar), `tileBg` / `tileText` (number tiles),
 `labelText` (DAY HR MIN SEC), `colonText` (the colons between numbers),

@@ -12,6 +12,7 @@ const CONFIG = {
   buttonText:       "send her LOVE",
   buttonLink:       "https://chris-hildebrandt.github.io/missionary-email-redirect/",
   hideButtonOnDone: false,
+  startsAt:         "2026-10-05T17:00",   // mission start, for the progress bar
   endsAt:           "2028-04-05T17:00",   // wall-clock time in timeZone
   timeZone:         "America/Boise",      // IANA name, e.g. "America/Sao_Paulo"
   lang:             "en",                 // language of the text above
@@ -22,6 +23,7 @@ const CONFIG = {
     buttonBg: "#1e6c93", buttonText: "#ffffff"
   },
   flip:             true,                 // animated flip cards; false = plain tiles
+  progress:         true,                 // progress bar from startsAt to endsAt; false hides it
   // phase 2 adds: missionMonths (18), modes, style, styles, slides (section 9)
 };
 // ====================================================================
@@ -78,14 +80,16 @@ const CONFIG = {
 
   /* Sizing. 1rem = digit size; every other size is in rem (or em of its own font-size),
      so one font-size line per layout scales the whole widget to fill its box.
-     - Stacked (default): ticker on top, button below. Needs ~16rem wide, ~4.2rem tall.
-     - Row (boxes wider than 5:1): ticker and button side by side. ~21rem wide, ~2.6rem tall.
-     The layout that gives bigger digits wins: at 5:1 both give the same size. Below 600px
-     wide it always stacks (Google Sites keeps the box's shape on phones), trading a little
-     digit size for a button that isn't squeezed in beside the numbers. */
-  html { font-size: clamp(8px, min(6.25vw, 23.8vh, (100vh - 44px) / 1.95), 160px); }
-  @media (min-aspect-ratio: 5/1) and (min-width: 600px) {
-    html { font-size: clamp(10px, min(4.76vw, 38.4vh), 160px); }
+     - Stacked (default): ticker, button, progress bar. Needs ~16rem wide (+ margin), ~5.2rem tall.
+     - Row (boxes wider than 4:1): ticker beside the button, progress bar under both.
+     The layout that gives bigger digits wins: at 4:1 both give about the same size. Below
+     600px wide it always stacks (Google Sites keeps the box's shape on phones), trading a
+     little digit size for a button that isn't squeezed in beside the numbers.
+     The third term in each keeps short boxes from clipping: labels, button and progress
+     text have minimum pixel sizes that don't shrink with the digits. */
+  html { font-size: clamp(8px, min(6vw, 19.2vh, (100vh - 62px) / 2.5), 160px); }
+  @media (min-aspect-ratio: 4/1) and (min-width: 600px) {
+    html { font-size: clamp(8px, min(4.76vw, 27.7vh, (100vh - 30px) / 3.1), 160px); }
   }
 
   html, body { width: 100%; height: 100%; margin: 0; background: transparent; }
@@ -98,20 +102,69 @@ const CONFIG = {
   .bar {
     box-sizing: border-box;
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    /* One column as wide as the ticker; the progress bar stretches to that width. */
+    display: grid;
+    grid-template-areas: "timer" "button" "progress";
     justify-content: center;
+    align-content: center;
+    gap: max(.3rem, 4px) .8rem;
     padding: .2rem;
     background: var(--background);
   }
-  .bar > * + * { margin-top: max(.3rem, 4px); }
-  @media (min-aspect-ratio: 5/1) and (min-width: 600px) {
-    .bar { flex-direction: row; }
-    .bar > * + * { margin-top: 0; margin-left: .8rem; }
+  .timer { grid-area: timer; }
+  .button { grid-area: button; justify-self: center; align-self: center; }
+  .progress { grid-area: progress; }
+  @media (min-aspect-ratio: 4/1) and (min-width: 600px) {
+    .bar { grid-template-areas: "timer button" "progress progress"; }
   }
 
   .timer { position: relative; }
+
+  /* Progress bar, half a digit tall, with a small mark at each 6-week transfer. The text
+     under it is a button that switches percent <-> "day x of y". */
+  /* Above the button's enlarged hit area, so a tap on the text toggles it. */
+  .progress { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+  .progress-track {
+    position: relative;
+    width: 100%;
+    height: .5rem;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--tile-bg);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12);
+  }
+  .progress-fill { width: 0; height: 100%; border-radius: inherit; background: var(--button-bg); }
+  .progress-mark {
+    position: absolute;
+    top: 30%; bottom: 30%;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: rgb(0 0 0 / .22);
+  }
+  .progress-mark.is-passed { background: rgb(255 255 255 / .75); }
+  .progress-text {
+    margin-top: .1em;
+    padding: 2px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--label-text);
+    font: inherit;
+    font-size: clamp(10px, .3rem, 24px);
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: .04em;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  @media (hover: hover) {
+    .progress-text:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+  }
+  .progress-text:focus-visible { outline: 2px solid var(--button-bg); }
+  @media (forced-colors: active) {
+    .progress-track { border: 1px solid CanvasText; }
+    .progress-fill { background: Highlight; }
+  }
 
   .units { display: flex; align-items: flex-start; }
   .unit { display: flex; flex-direction: column; align-items: center; }
@@ -257,6 +310,11 @@ const CONFIG = {
 
     <!-- Fallback link and text, shown only if CONFIG fails to load: keep in sync with CONFIG. -->
     <a class="button" href="https://chris-hildebrandt.github.io/missionary-email-redirect/" target="_blank" rel="noopener"><span class="button-text">send her LOVE</span><span class="visually-hidden"> (opens in new tab)</span></a>
+
+    <div class="progress" hidden>
+      <div class="progress-track" role="progressbar" aria-label="Mission progress" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill"></div></div>
+      <button type="button" class="progress-text" title="Switch between percent and days"></button>
+    </div>
   </div>
 
 <script>
@@ -363,6 +421,17 @@ const CONFIG = {
         JSON.stringify(cfg.timeZone) + '. Abbreviations like "MST" and "Etc/..." zones are not accepted.' };
     }
     return { endsAt: zonedTimeToUtc(fields, zone), zone: zone };
+  }
+
+  // Mission progress at instant t: pct 0-100, day 1..total (0 before the start).
+  function progressAt(t, start, end) {
+    var total = Math.round((end - start) / DAY);
+    if (!(t >= start)) return { pct: 0, day: 0, total: total };
+    if (t >= end) return { pct: 100, day: total, total: total };
+    return { pct: (t - start) / (end - start) * 100, day: Math.min(total, Math.floor((t - start) / DAY) + 1), total: total };
+  }
+  function progressText(p, mode) {
+    return mode === 'days' ? 'day ' + p.day + ' of ' + p.total : p.pct.toFixed(1) + '%';
   }
 
   // "Wed, Apr 5, 2028, 5:00 PM MDT (2028-04-05T23:00:00Z)"
@@ -570,6 +639,59 @@ const CONFIG = {
     var endsAt = target.endsAt;
     api.target = formatTarget(endsAt, target.zone);
 
+    // Progress bar (startsAt -> endsAt) with a faint mark at each 6-week transfer.
+    // Tapping the text switches percent <-> "day x of y"; the choice is kept per visitor.
+    var progress = el.querySelector('.progress');
+    var startsAt = null, progressMode = 'percent', lastWidth = null, lastProgress = null;
+    if (cfg.progress !== false) {
+      var start = resolveTarget({ endsAt: cfg.startsAt, timeZone: cfg.timeZone });
+      if (start.error || !(start.endsAt < endsAt)) {
+        console.warn('CONFIG.startsAt must look like "2026-10-05T17:00" and come before endsAt; got ' +
+          JSON.stringify(cfg.startsAt) + '. The progress bar is hidden.');
+      } else {
+        startsAt = start.endsAt;
+      }
+    }
+    var track = progress.querySelector('.progress-track');
+    var fill = progress.querySelector('.progress-fill');
+    var progressButton = progress.querySelector('.progress-text');
+    progress.hidden = startsAt === null;
+    if (startsAt !== null) {
+      try { if (localStorage.getItem('countdown.progressText') === 'days') progressMode = 'days'; } catch (err) {}
+      for (var mark = 42 * DAY; mark < endsAt - startsAt; mark += 42 * DAY) {
+        var markEl = doc.createElement('span'); // not "tick": that's the timer function below
+        markEl.className = 'progress-mark';
+        markEl.style.left = (mark / (endsAt - startsAt) * 100).toFixed(2) + '%';
+        track.appendChild(markEl);
+      }
+      progressButton.addEventListener('click', function () {
+        progressMode = progressMode === 'days' ? 'percent' : 'days';
+        try { localStorage.setItem('countdown.progressText', progressMode); } catch (err) {}
+        lastProgress = null;
+        renderProgress(now());
+      });
+    }
+
+    function renderProgress(t) {
+      if (startsAt === null) return;
+      var p = progressAt(t, startsAt, endsAt);
+      var width = p.pct.toFixed(2);
+      if (width !== lastWidth) {
+        fill.style.width = width + '%';
+        track.setAttribute('aria-valuenow', p.pct.toFixed(1));
+        Array.prototype.forEach.call(track.querySelectorAll('.progress-mark'), function (m) {
+          m.classList.toggle('is-passed', parseFloat(m.style.left) <= p.pct);
+        });
+        lastWidth = width;
+      }
+      var text = progressText(p, progressMode);
+      if (text !== lastProgress) {
+        progressButton.textContent = text;
+        track.setAttribute('aria-valuetext', text);
+        lastProgress = text;
+      }
+    }
+
     // Clock correction is anchored to the monotonic clock: once the server time is
     // known, now = serverEstimate + time elapsed since. If the device clock and the
     // monotonic clock later disagree by > 2 s (OS clock fixed by NTP, or the monotonic
@@ -607,8 +729,10 @@ const CONFIG = {
       if (stopped) return;
       env.clearTimeout(timer);
       timer = null;
-      var r = splitRemaining(endsAt - now());
+      var t = now();
+      var r = splitRemaining(endsAt - t);
       render(r);
+      renderProgress(t);
       setDone(r.total === 0);
       if (!done && !doc.hidden) {
         timer = env.setTimeout(tick, SECOND - (((now() % SECOND) + SECOND) % SECOND));
@@ -655,6 +779,7 @@ const CONFIG = {
     zonedTimeToUtc: zonedTimeToUtc, checkTimeZone: checkTimeZone, resolveTarget: resolveTarget,
     formatTarget: formatTarget, checkTheme: checkTheme, splitRemaining: splitRemaining,
     formatDays: formatDays, summaryText: summaryText, computeSkew: computeSkew,
+    progressAt: progressAt, progressText: progressText,
     passThrough: passThrough, applyText: applyText, mount: mount
   };
 

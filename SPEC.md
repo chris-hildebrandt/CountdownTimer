@@ -298,6 +298,17 @@ Shows how much of the 18 months away has passed.
 - Both can exist and be switched in config. Recommendation: build A first, then B if you
   want more character. Either costs ~1–2 KB, no requests.
 
+**Built (Oct 2026), option A, as revised:** the start is configured as `startsAt`
+("2026-10-05T17:00") rather than derived. The bar sits at the very bottom, under the button,
+as wide as the ticker (under both ticker and button in the side-by-side layout), and is half a
+digit tall. It fills in `buttonBg` on a `tileBg` track, with a small mark at each 6-week transfer
+(13 marks; passed marks turn light). The text under it shows "4.0%" and switches to
+"day 23 of 548" on tap; the choice is kept per visitor (localStorage). `progress: false`
+hides it. No library, no requests.
+
+**Next (wishlist):** color the section of the bar for the transfer she is in now, so the
+current 6-week stretch stands out.
+
 ### 9.3 Display styles (split-flap and others)
 **Visitors switch styles** with a small **palette button** (Material Symbols `palette` icon)
 in the bar's corner. Each tap moves to the next style. The choice is saved per visitor in

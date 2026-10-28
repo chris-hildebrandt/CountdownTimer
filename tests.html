@@ -270,6 +270,34 @@
     eq('pass-through: mounted button href carries #to=', withTo.el.querySelector('.button').getAttribute('href'), R + '#to=YWJj');
     withTo.api.stop();
 
+    // ---- progress bar ----
+    var PS = Date.UTC(2026, 9, 5, 23), PE = Date.UTC(2028, 3, 5, 23); // both 5:00 PM MDT
+    function prog(t) { var p = CB.progressAt(t, PS, PE); return [Math.round(p.pct * 100) / 100, p.day, p.total]; }
+    eq('progress: before start -> 0%, day 0', prog(PS - S), [0, 0, 548]);
+    eq('progress: at start -> day 1', prog(PS), [0, 1, 548]);
+    eq('progress: 1 day in -> day 2', prog(PS + DAY), [0.18, 2, 548]);
+    eq('progress: halfway', prog(PS + 274 * DAY), [50, 275, 548]);
+    eq('progress: 1 s before end -> last day', prog(PE - S), [100, 548, 548]);
+    eq('progress: at and after end -> 100%, day 548', [prog(PE), prog(PE + DAY)], [[100, 548, 548], [100, 548, 548]]);
+    eq('progress text: percent, one decimal', CB.progressText(CB.progressAt(PS + 22 * DAY, PS, PE), 'percent'), '4.0%');
+    eq('progress text: days', CB.progressText(CB.progressAt(PS + 22 * DAY, PS, PE), 'days'), 'day 23 of 548');
+    var pm = mountFresh(cfgWith({}), fakeEnv({ real0: PS + 274 * DAY }));
+    eq('progress: mounted bar shown, half full, 13 transfer marks, first 6 passed',
+       [pm.el.querySelector('.progress').hidden, pm.el.querySelector('.progress-fill').style.width,
+        pm.el.querySelectorAll('.progress-mark').length, pm.el.querySelectorAll('.progress-mark.is-passed').length,
+        pm.el.querySelector('.progress-text').textContent],
+       [false, '50%', 13, 6, '50.0%']);
+    pm.el.querySelector('.progress-text').click();
+    eq('progress: tap switches to days', pm.el.querySelector('.progress-text').textContent, 'day 275 of 548');
+    pm.el.querySelector('.progress-text').click(); // back to percent, so the stored choice is unchanged
+    pm.api.stop();
+    var noStart = silenced(function () { return mountFresh(cfgWith({ startsAt: '2029-01-01T00:00' }), fakeEnv({ real0: PS })); });
+    eq('progress: startsAt after endsAt -> bar hidden', noStart.el.querySelector('.progress').hidden, true);
+    noStart.api.stop();
+    var off = mountFresh(cfgWith({ progress: false }), fakeEnv({ real0: PS }));
+    eq('progress: progress false -> bar hidden', off.el.querySelector('.progress').hidden, true);
+    off.api.stop();
+
     // ---- clock check with a mock fetch ----
     function serverFetch(env, rtt, extraHeaders) {
       return function () {
